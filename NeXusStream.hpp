@@ -28,16 +28,19 @@
 
 /////////////////// Subversion Repository Details ////////////////////////
 // Repository Location     $HeadURL: https://svn.nexusformat.org/code/trunk/bindings/cpp/NeXusStream.hpp $
-// Revision of last commit $LastChangedRevision: 1108 $ 
-// Date of last commit     $LastChangedDate: 2008-10-10 10:05:30 +0100 (Fri, 10 Oct 2008) $
-// Author of last commit   $LastChangedBy: Freddie Akeroyd $
+// Revision of last commit $LastChangedRevision: 1536 $ 
+// Date of last commit     $LastChangedDate: 2010-10-06 15:15:01 +0100 (Wed, 06 Oct 2010) $
+// Last changed by         $LastChangedBy: Reuterma $
 //////////////////////////////////////////////////////////////////////////
 
 /**
  * \file NeXusStream.hpp
  * Header for IOStream like interface to NeXus files
- * \version $LastChangedRevision: 1108 $
- * \date    $LastChangedDate: 2008-10-10 10:05:30 +0100 (Fri, 10 Oct 2008) $
+ * \author Freddie Akeroyd, STFC ISIS Facility, GB
+ * \version $LastChangedRevision: 1536 $
+ * \date    $LastChangedDate: 2010-10-06 15:15:01 +0100 (Wed, 06 Oct 2010) $
+ * \defgroup cpp_stream IOstream like interface
+ * \ingroup cpp_main
  */
 
 #include <list>
@@ -48,7 +51,9 @@ namespace NeXus
 {
 namespace Stream
 {
-    // interface implemented by all serialisable NeXus components
+  /**
+   * interface implemented by all serialisable NeXus components
+   */
     class NXDLL_EXPORT ISerialisable
     {
       public:
@@ -56,8 +61,12 @@ namespace Stream
 	virtual void writeToFile(File& nf) const = 0;
     };
 
+    /// \ingroup cpp_stream
     enum StreamModifier { Close=0 };
 
+  /**
+   * Base class for serialisable named and typed parameter
+   */
     class NXDLL_EXPORT HolderBase : public ISerialisable
     {
       protected:
@@ -73,6 +82,9 @@ namespace Stream
 	virtual ~HolderBase() {}
     };
 
+  /**
+   * Serialisable NeXus attribute
+   */
     template<typename NumT>
     class NXDLL_EXPORT AttrHolder : public HolderBase
     {
@@ -94,6 +106,10 @@ namespace Stream
 	virtual ~AttrHolder() { m_value = NULL; m_c_value = NULL; }
     };
 
+  /**
+   * Serialisable attribute
+   * \ingroup cpp_stream
+   */
     class NXDLL_EXPORT Attr : public ISerialisable
     {
       protected:
@@ -119,7 +135,9 @@ namespace Stream
 	virtual ~Attr() { delete m_holder; m_holder = NULL; }
     };
 
-    
+  /**
+   * Serialisable NeXus class with associated attributes
+   */
     class NXDLL_EXPORT ObjectWithAttr : public ISerialisable
     {
        protected:
@@ -163,6 +181,10 @@ namespace Stream
 	virtual ~ObjectWithAttr() { }
     };
     
+  /**
+   * Serialisable NeXus group object
+   * \ingroup cpp_stream
+   */
     class NXDLL_EXPORT Group : public ObjectWithAttr
     {
       protected:
@@ -191,6 +213,9 @@ namespace Stream
 	virtual ~Group() {}
     };
 
+  /**
+   * Serialisable NeXus data
+   */
     template<typename NumT>
     class NXDLL_EXPORT DataHolder : public HolderBase
     {
@@ -213,6 +238,10 @@ namespace Stream
 	virtual ~DataHolder() {}
     };
 
+  /**
+   * Serialisable data object that contains attributes
+   * \ingroup cpp_stream
+   */
     class NXDLL_EXPORT Data : public ObjectWithAttr
     {
 	HolderBase* m_holder;
@@ -244,10 +273,16 @@ namespace Stream
 	virtual ~Data() { delete m_holder; }
     };
 
+    /// \ingroup cpp_stream
    NXDLL_EXPORT File& operator<<(File& nf, const ISerialisable& obj);
+    
+    /// \ingroup cpp_stream
    NXDLL_EXPORT File& operator>>(File& nf, const ISerialisable& obj);
 
+    /// \ingroup cpp_stream
    NXDLL_EXPORT File& operator<<(File& nf, const StreamModifier sm);
+ 
+    /// \ingroup cpp_stream
    NXDLL_EXPORT File& operator>>(File& nf, const StreamModifier sm);
 
   } // Stream

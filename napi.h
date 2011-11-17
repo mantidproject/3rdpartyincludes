@@ -3,7 +3,7 @@
   
   Application Program Interface Header File
   
-  Copyright (C) 2000-2007 Mark Koennecke, Uwe Filges
+  Copyright (C) 2000-2011 Mark Koennecke, Uwe Filges
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -21,25 +21,52 @@
  
   For further information, see <http://www.nexusformat.org>
   
-  $Id: napi.h 1042 2008-07-20 17:02:47Z Freddie Akeroyd $
+  $Id: napi.h 1747 2011-11-08 16:13:19Z Freddie Akeroyd $
 
  ----------------------------------------------------------------------------*/
 /** \file 
- * Documentation for the NeXus-API version 4.2
- * 2000-2007, the NeXus group 
+ * Documentation for the NeXus-API version 4.3
+ * 2000-2011, the NeXus International Advisory Commitee
+ * \defgroup c_main C API 
+ * \defgroup c_types Data Types
+ * \ingroup c_main
+ * \defgroup c_init General Initialisation and shutdown
+ * \ingroup c_main
+ * \defgroup c_group Reading and Writing Groups
+ * \ingroup c_main
+ * \defgroup c_readwrite Reading and Writing Data
+ * \ingroup c_main
+ * \defgroup c_navigation General File navigation
+ * \ingroup c_main
+ * \defgroup c_metadata Meta data routines
+ * \ingroup c_main
+ * \defgroup c_linking Linking 
+ * \ingroup c_main
+ * \defgroup c_memory Memory allocation
+ * \ingroup c_main
+ * \defgroup c_external External linking
+ * \ingroup c_main
  */
   
 #ifndef NEXUSAPI
 #define NEXUSAPI
 
+#include <stdint.h>
+
 /* NeXus HDF45 */
-#define NEXUS_VERSION   "4.1.0"                /* major.minor.patch */
+#define NEXUS_VERSION   "4.3.0"                /* major.minor.patch */
 
 #define CONSTCHAR       const char
 
 #ifdef _MSC_VER
 #define snprintf nxisnprintf
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 extern int nxisnprintf(char* buffer, int len, const char* format, ... );
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 #endif /* _MSC_VER */
 
 typedef void* NXhandle;         /* really a pointer to a NexusFile structure */
@@ -69,9 +96,10 @@ typedef char NXname[128];
  * \li NXACC_CREATE4 create a NeXus HDF-4 file
  * \li NXACC_CREATE5 create a NeXus HDF-5 file.
  * \li NXACC_CREATEXML create a NeXus XML file.
+ * \li NXACC_CHECKNAMESYNTAX Check names conform to NeXus allowed characters.
  */
 typedef enum {NXACC_READ=1, NXACC_RDWR=2, NXACC_CREATE=3, NXACC_CREATE4=4, 
-	      NXACC_CREATE5=5, NXACC_CREATEXML=6, NXACC_TABLE=8, NXACC_NOSTRIP=128} NXaccess_mode;
+	      NXACC_CREATE5=5, NXACC_CREATEXML=6, NXACC_TABLE=8, NXACC_NOSTRIP=128, NXACC_CHECKNAMESYNTAX=256 } NXaccess_mode;
 
 /**
  * A combination of options from #NXaccess_mode
@@ -91,19 +119,31 @@ typedef struct {
 
 #define NX_MAXRANK 32
 #define NX_MAXNAMELEN 64
+#define NX_MAXPATHLEN 1024
 
 
-/** \var NeXus data types
- * \li NX_FLOAT32     32 bit float
- * \li NX_FLOAT64     64 nit float == double
- * \li NX_INT8        8 bit integer == byte
- * \li NX_UINT8       8 bit unsigned integer
- * \li NX_INT16       16 bit integer
- * \li NX_UINT16      16 bit unsigned integer
- * \li NX_INT32       32 bit integer
- * \li NX_UINT32      32 bit unsigned integer
- * \li NX_CHAR        8 bit character
- * \li NX_BINARY      lump of binary data == NX_UINT8
+/**
+ * \ingroup c_types
+ * \def NX_FLOAT32     
+ * 32 bit float
+ * \def NX_FLOAT64     
+ * 64 bit float == double
+ * \def NX_INT8        
+ * 8 bit integer == byte
+ * \def NX_UINT8       
+ * 8 bit unsigned integer
+ * \def NX_INT16       
+ * 16 bit integer
+ * \def NX_UINT16      
+ * 16 bit unsigned integer
+ * \def NX_INT32       
+ * 32 bit integer
+ * \def NX_UINT32      
+ * 32 bit unsigned integer
+ * \def NX_CHAR        
+ * 8 bit character
+ * \def NX_BINARY      
+ * lump of binary data == NX_UINT8
 */
 /*--------------------------------------------------------------------------*/ 
 
@@ -123,6 +163,7 @@ typedef struct {
 #define NX_BINARY   21
 
 /* Map NeXus compression methods to HDF compression methods */
+#define NX_CHUNK     0
 #define NX_COMP_NONE 100
 #define NX_COMP_LZW 200
 #define NX_COMP_RLE 300
@@ -158,33 +199,43 @@ typedef struct {
 #    endif
 
 #    define NXopen              MANGLE(nxiopen)
+#    define NXreopen            MANGLE(nxireopen)
 #    define NXclose             MANGLE(nxiclose)
 #    define NXmakegroup         MANGLE(nximakegroup)
 #    define NXopengroup         MANGLE(nxiopengroup)
 #    define NXopenpath          MANGLE(nxiopenpath)
+#    define NXgetpath           MANGLE(nxigetpath)
 #    define NXopengrouppath     MANGLE(nxiopengrouppath)
 #    define NXclosegroup        MANGLE(nxiclosegroup)
 #    define NXmakedata          MANGLE(nximakedata)
+#    define NXmakedata64        MANGLE(nximakedata64)
 #    define NXcompmakedata      MANGLE(nxicompmakedata)
+#    define NXcompmakedata64    MANGLE(nxicompmakedata64)
 #    define NXcompress          MANGLE(nxicompress)
 #    define NXopendata          MANGLE(nxiopendata)
 #    define NXclosedata         MANGLE(nxiclosedata)
 #    define NXputdata           MANGLE(nxiputdata)
 #    define NXputslab           MANGLE(nxiputslab)
+#    define NXputslab64         MANGLE(nxiputslab64)
 #    define NXputattr           MANGLE(nxiputattr)
 #    define NXgetdataID         MANGLE(nxigetdataid)
 #    define NXmakelink          MANGLE(nximakelink)
 #    define NXmakenamedlink     MANGLE(nximakenamedlink)
 #    define NXopensourcegroup   MANGLE(nxiopensourcegroup)
 #    define NXmalloc            MANGLE(nximalloc)
+#    define NXmalloc64          MANGLE(nximalloc64)
 #    define NXfree              MANGLE(nxifree)
 #    define NXflush             MANGLE(nxiflush)
 
 #    define NXgetinfo           MANGLE(nxigetinfo)
+#    define NXgetinfo64         MANGLE(nxigetinfo64)
+#    define NXgetrawinfo        MANGLE(nxigetrawinfo)
+#    define NXgetrawinfo64      MANGLE(nxigetrawinfo64)
 #    define NXgetnextentry      MANGLE(nxigetnextentry)
 #    define NXgetdata           MANGLE(nxigetdata)
 
 #    define NXgetslab           MANGLE(nxigetslab)
+#    define NXgetslab64         MANGLE(nxigetslab64)
 #    define NXgetnextattr       MANGLE(nxigetnextattr)
 #    define NXgetattr           MANGLE(nxigetattr)
 #    define NXgetattrinfo       MANGLE(nxigetattrinfo)
@@ -197,7 +248,10 @@ typedef struct {
 #    define NXsetcache          MANGLE(nxisetcache)
 #    define NXinquirefile       MANGLE(nxiinquirefile) 
 #    define NXisexternalgroup   MANGLE(nxiisexternalgroup)
+#    define NXisexternaldataset   MANGLE(nxiisexternaldataset)
 #    define NXlinkexternal      MANGLE(nxilinkexternal)
+#    define NXlinkexternaldataset      MANGLE(nxilinkexternaldataset)
+#    define NXgetversion        MANGLE(nxigetversion)
 
 /* 
  * FORTRAN helpers - for NeXus internal use only 
@@ -209,7 +263,7 @@ typedef struct {
 #    define NXfcompmakedata     MANGLE(nxifcompmakedata)
 #    define NXfcompress         MANGLE(nxifcompress)
 #    define NXfputattr          MANGLE(nxifputattr)
-
+#    define NXfgetpath          MANGLE(nxifgetpath)
 
 /* 
  * Standard interface 
@@ -242,19 +296,31 @@ extern "C" {
    * Support for HDF-4 is deprecated.
    * \param pHandle A file handle which will be initialized upon successfull completeion of NXopen.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_init
    */
 extern  NXstatus  NXopen(CONSTCHAR * filename, NXaccess access_method, NXhandle* pHandle);
+
+  /** 
+   * Opens an existing NeXus file a second time for e.g. access from another thread.
+   * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_init
+   */
+extern  NXstatus  NXreopen(NXhandle pOrigHandle, NXhandle* pNewHandle);
+
   /**
    * close a NeXus file
    * \param pHandle A NeXus file handle as returned from NXopen. pHandle is invalid after this 
    * call.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_init
    */
 extern  NXstatus  NXclose(NXhandle* pHandle);
+
   /**
    * flush data to disk
    * \param pHandle A NeXus file handle as initialized by NXopen. 
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXflush(NXhandle* pHandle);
 
@@ -265,16 +331,20 @@ extern  NXstatus  NXflush(NXhandle* pHandle);
    * \param name The name of the group
    * \param NXclass the class name of the group. Should start with the prefix NX
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_group
    */
 extern  NXstatus  NXmakegroup (NXhandle handle, CONSTCHAR *name, CONSTCHAR* NXclass);
+
   /**
    * Step into a group. All further access will be within the opened group.
    * \param handle A NeXus file handle as initialized by NXopen. 
    * \param name The name of the group
    * \param NXclass the class name of the group. Should start with the prefix NX
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_group
    */
 extern  NXstatus  NXopengroup (NXhandle handle, CONSTCHAR *name, CONSTCHAR* NXclass);
+
   /**
    * Open the NeXus object with the path specified
    * \param handle A NeXus file handle as returned from NXopen. 
@@ -282,8 +352,10 @@ extern  NXstatus  NXopengroup (NXhandle handle, CONSTCHAR *name, CONSTCHAR* NXcl
    * is a list of group names and SDS names separated with / (slash). 
    * Example: /entry1/sample/name 
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_navigation 
    */
 extern  NXstatus  NXopenpath (NXhandle handle, CONSTCHAR *path);
+
   /**
    * Opens the group in which the NeXus object with the specified path exists
    * \param handle A NeXus file handle as initialized by NXopen. 
@@ -291,14 +363,28 @@ extern  NXstatus  NXopenpath (NXhandle handle, CONSTCHAR *path);
    * is a list of group names and SDS names separated with / (slash). 
    * Example: /entry1/sample/name 
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_navigation 
    */
 extern  NXstatus  NXopengrouppath (NXhandle handle, CONSTCHAR *path);
+
+  /**
+   * Retrieve the current path in the NeXus file
+   * \param handle a NeXus file handle
+   * \param path A buffer to copy the path too
+   * \param  pathlen The maximum number of characters to copy into path
+   * \return NX_OK or NX_ERROR
+   * \ingroup c_navigation
+   */
+extern NXstatus NXgetpath(NXhandle handle, char *path, int pathlen);
+
   /**
    * Closes the currently open group and steps one step down in the NeXus file 
    * hierarchy.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_group 
    */
 extern  NXstatus  NXclosegroup(NXhandle handle);
+
   /**
    * Create a multi dimensional data array or dataset. The dataset is NOT opened. 
    * \param handle A NeXus file handle as initialized by NXopen. 
@@ -308,9 +394,18 @@ extern  NXstatus  NXclosegroup(NXhandle handle);
    * \param dim An array of size rank holding the size of the dataset in each dimension. The first dimension 
    * can be NX_UNLIMITED. Data can be appended to such a dimension using NXputslab. 
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXmakedata (NXhandle handle, CONSTCHAR* label, int datatype, int rank, int dim[]);
+
+
   /**
+   * @copydoc NXmakedata()
+   */
+extern  NXstatus  NXmakedata64 (NXhandle handle, CONSTCHAR* label, int datatype, int rank, int64_t dim[]);
+
+
+/**
    * Create a compressed dataset. The dataset is NOT opened. Data from this set will automatically be compressed when 
    * writing and decompressed on reading. 
    * \param handle A NeXus file handle as initialized by NXopen. 
@@ -328,8 +423,17 @@ extern  NXstatus  NXmakedata (NXhandle handle, CONSTCHAR* label, int datatype, i
    * This is a parameter used by HDF for performance optimisations. If you write your data in one go, this 
    * should be the same as the data dimension. If you write it in slabs, this is your preferred slab size. 
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXcompmakedata (NXhandle handle, CONSTCHAR* label, int datatype, int rank, int dim[], int comp_typ, int bufsize[]);
+
+
+/**
+  * @copydoc NXcompmakedata() 
+  */
+extern  NXstatus NXcompmakedata64 (NXhandle handle, CONSTCHAR* label, int datatype, int rank, int64_t dim[], int comp_typ, int64_t chunk_size[]);
+
+
   /**
    * Switch compression on. This routine is superseeded by NXcompmakedata and thus 
    * is deprecated.
@@ -339,22 +443,28 @@ extern  NXstatus  NXcompmakedata (NXhandle handle, CONSTCHAR* label, int datatyp
    * \li NX_COMP_LZW lossless Lempel Ziv Welch compression (recommended)
    * \li NX_COMP_RLE run length encoding (only HDF-4)
    * \li NX_COMP_HUF Huffmann encoding (only HDF-4)
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXcompress (NXhandle handle, int compr_type);
+
   /**
    * Open access to a dataset. After this call it is possible to write and read data or 
    * attributes to and from the dataset.
    * \param handle A NeXus file handle as initialized by NXopen. 
    * \param label The name of the dataset
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite 
    */
 extern  NXstatus  NXopendata (NXhandle handle, CONSTCHAR* label);
+
   /**
    * Close access to a dataset. 
    * \param handle A NeXus file handle as initialized by NXopen. 
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite 
    */
 extern  NXstatus  NXclosedata(NXhandle handle);
+
   /**
    * Write data to a datset which has previouly been opened with NXopendata. 
    * This writes all the data in one go. Data should be a pointer to a memory 
@@ -362,8 +472,10 @@ extern  NXstatus  NXclosedata(NXhandle handle);
    * \param handle A NeXus file handle as initialized by NXopen. 
    * \param data Pointer to data to write.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXputdata(NXhandle handle, void* data);
+
   /**
    * Write an attribute. The kind of attribute written depends on the  
    * poistion in the file: at root level, a global attribute is written, if 
@@ -375,8 +487,10 @@ extern  NXstatus  NXputdata(NXhandle handle, void* data);
    * \param iDataLen The length of the data in data in bytes.
    * \param iType The NeXus data type of the attribute. 
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXputattr(NXhandle handle, CONSTCHAR* name, void* data, int iDataLen, int iType);
+
   /**
    * Write  a subset of a multi dimensional dataset.
    * \param handle A NeXus file handle as initialized by NXopen. 
@@ -384,8 +498,15 @@ extern  NXstatus  NXputattr(NXhandle handle, CONSTCHAR* name, void* data, int iD
    * \param start An array holding the start indices where to start the data subset.
    * \param size An array holding the size of the data subset to write in each dimension.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXputslab(NXhandle handle, void* data, int start[], int size[]);    
+
+  /**
+   * @copydoc NXputdata()
+   */
+extern  NXstatus  NXputslab64(NXhandle handle, void* data, int64_t start[], int64_t size[]);    
+
   /**
    * Retrieve link data for a dataset. This link data can later on be used to link this 
    * dataset into a different group. 
@@ -393,8 +514,10 @@ extern  NXstatus  NXputslab(NXhandle handle, void* data, int start[], int size[]
    * \param pLink A link data structure which will be initialized with the required information
    * for linking. 
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_linking
    */
 extern  NXstatus  NXgetdataID(NXhandle handle, NXlink* pLink);
+
   /**
    * Create a link to the group or dataset described by pLink in the currently open 
    * group. 
@@ -402,8 +525,10 @@ extern  NXstatus  NXgetdataID(NXhandle handle, NXlink* pLink);
    * \param pLink A link data structure describing the object to link. This must have been initialized
    * by either a call to NXgetdataID or NXgetgroupID.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_linking
    */
 extern  NXstatus  NXmakelink(NXhandle handle, NXlink* pLink);
+
   /**
    * Create a link to the group or dataset described by pLink in the currently open 
    * group. But give the linked item a new name.
@@ -412,15 +537,19 @@ extern  NXstatus  NXmakelink(NXhandle handle, NXlink* pLink);
    * \param pLink A link data structure describing the object to link. This must have been initialized
    * by either a call to NXgetdataID or NXgetgroupID.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_linking
    */
 extern  NXstatus  NXmakenamedlink(NXhandle handle, CONSTCHAR* newname, NXlink* pLink);
+
   /**
    * Open the source group of a linked group or dataset. Returns an error when the item is 
    * not a linked item.
    * \param handle A NeXus file handle as initialized by NXopen.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_navigation
    */
 extern  NXstatus  NXopensourcegroup(NXhandle handle);
+
   /**
    * Read a complete dataset from the currently open dataset into memory. 
    * \param handle A NeXus file handle as initialized by NXopen.
@@ -428,8 +557,10 @@ extern  NXstatus  NXopensourcegroup(NXhandle handle);
    * area large enough to accomodate the data read. Otherwise your program may behave in unexpected
    * and unwelcome ways.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXgetdata(NXhandle handle, void* data);
+
   /**
    * Retrieve information about the curretly open dataset.
    * \param handle A NeXus file handle as initialized by NXopen.
@@ -439,19 +570,29 @@ extern  NXstatus  NXgetdata(NXhandle handle, void* data);
    * dimensions. The array must have at least the size of rank.
    * \param datatype A pointer to an integer which be set to the NeXus data type code for this dataset.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_metadata
    */
 extern  NXstatus  NXgetinfo(NXhandle handle, int* rank, int dimension[], int* datatype);
+
+  /**
+   * @copydoc NXgetinfo()
+   */
+extern  NXstatus  NXgetinfo64(NXhandle handle, int* rank, int64_t dimension[], int* datatype);
+
   /**
    * Get the next entry in the currently open group. This is for retrieving infromation about the 
-   * content of a NeXus group. In order to search a group NXgetnextentry is called in a loop until 
-   * NXgetnextentry returns NX_EOD which indicates that there are no further items in the group.
+   * content of a NeXus group. In order to search a group #NXgetnextentry is called in a loop until 
+   * #NXgetnextentry returns NX_EOD which indicates that there are no further items in the group.
+   * Reset search using #NXinitgroupdir
    * \param handle A NeXus file handle as initialized by NXopen.
    * \param name The name of the object
    * \param nxclass The NeXus class name for a group or the string SDS for a dataset.
    * \param datatype The NeXus data type if the item is a SDS. 
    * \return NX_OK on success, NX_ERROR in the case of an error, NX_EOD when there are no more items.   
+   * \ingroup c_navigation
    */
 extern  NXstatus  NXgetnextentry(NXhandle handle, NXname name, NXname nxclass, int* datatype);
+
   /**
    * Read a subset of data from file into memory. 
    * \param handle A NeXus file handle as initialized by NXopen.
@@ -460,36 +601,51 @@ extern  NXstatus  NXgetnextentry(NXhandle handle, NXname name, NXname nxclass, i
    * \param start An array holding the start indices where to start reading the data subset.
    * \param size An array holding the size of the data subset to read for each dimension.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXgetslab(NXhandle handle, void* data, int start[], int size[]);
+
+
   /**
+   * @copydoc NXgetslab()
+   */
+extern  NXstatus  NXgetslab64(NXhandle handle, void* data, const int64_t start[], const int64_t size[]);
+
+/**
    * Iterate over global, group or dataset attributes depending on the currently open group or 
-   * dataset. In order to search attributes multiple calls to NXgetnextattr are performed in a loop 
-   * until NXgentnextattr returns NX_EOD which indicates that there are no further attributes.
+   * dataset. In order to search attributes multiple calls to #NXgetnextattr are performed in a loop 
+   * until #NXgetnextattr returns NX_EOD which indicates that there are no further attributes.
+   * reset search using #NXinitattrdir
    * \param handle A NeXus file handle as initialized by NXopen.
    * \param pName The name of the attribute
    * \param iLength A pointer to an integer which be set to the length of the attribute data.
    * \param iType A pointer to an integer which be set to the NeXus data type of the attribute.
    * \return NX_OK on success, NX_ERROR in the case of an error, NX_EOD when there are no more items.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXgetnextattr(NXhandle handle, NXname pName, int *iLength, int *iType);
+
   /**
-   * Read an attribute.
+   * Read an attribute. 
    * \param handle A NeXus file handle as initialized by NXopen.
    * \param name The name of the atrribute to read.
    * \param data A pointer to a memory area large enough to hold the attributes value.
    * \param iDataLen The length of data in bytes.
    * \param iType A pointer to an integer which will had been set to the NeXus data type of the attribute.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXgetattr(NXhandle handle, char* name, void* data, int* iDataLen, int* iType);
+
   /**
    * Get the count of attributes in the currently open dataset, group or global attributes when at root level.
    * \param handle A NeXus file handle as initialized by NXopen.
    * \param no_items A pointer to an integer which be set to the number of attributes available.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_metadata
    */
 extern  NXstatus  NXgetattrinfo(NXhandle handle, int* no_items);
+
   /**
    * Retrieve link data for the currently open group. This link data can later on be used to link this 
    * group into a different group. 
@@ -497,40 +653,51 @@ extern  NXstatus  NXgetattrinfo(NXhandle handle, int* no_items);
    * \param pLink A link data structure which will be initialized with the required information
    * for linking. 
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_linking
    */
 extern  NXstatus  NXgetgroupID(NXhandle handle, NXlink* pLink);
+
   /**
    * Retrieve information about the currently open group.
    * \param handle A NeXus file handle as initialized by NXopen.
-   * \param no_items A pointer to an integer which will be set to the count of group attributes 
-   * available.
+   * \param no_items A pointer to an integer which will be set to the count 
+   *   of group elements available. This is the count of other groups and 
+   * data sets in this group.  
    * \param name The name of the group.
    * \param nxclass The NeXus class name of the group.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_metadata
    */
 extern  NXstatus  NXgetgroupinfo(NXhandle handle, int* no_items, NXname name, NXname nxclass);
+
   /**
    * Tests if two link data structures describe the same item.
    * \param handle A NeXus file handle as initialized by NXopen.
    * \param pFirstID The first link data for the test.
    * \param pSecondID The second link data structure.
    * \return NX_OK when both link data structures describe the same item, NX_ERROR else.   
+   * \ingroup c_linking
    */
 extern  NXstatus  NXsameID(NXhandle handle, NXlink* pFirstID, NXlink* pSecondID);
+
   /**
-   * Resets a pending group search to the start again. To be called in a Nxgetnextentry loop when 
+   * Resets a pending group search to the start again. To be called in a #NXgetnextentry loop when 
    * a group search has to be restarted.
    * \param handle A NeXus file handle as initialized by NXopen.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_navigation 
    */
 extern  NXstatus  NXinitgroupdir(NXhandle handle);
+
   /**
-   * Resets a pending attribute search to the start again. To be called in a Nxgetnextattr loop when 
+   * Resets a pending attribute search to the start again. To be called in a #NXgetnextattr loop when 
    * an attribute search has to be restarted.
    * \param handle A NeXus file handle as initialized by NXopen.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_navigation
    */
 extern  NXstatus  NXinitattrdir(NXhandle handle);
+
   /**
    * Sets the format for number printing. This call has only an effect when using the XML physical file 
    * format. 
@@ -538,8 +705,10 @@ extern  NXstatus  NXinitattrdir(NXhandle handle);
    * \param type The NeXus data type to set the format for.
    * \param format The C-language format string to use for this data type.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_readwrite
    */
 extern  NXstatus  NXsetnumberformat(NXhandle handle, int type, char *format);
+
   /**
    * Inquire the filename of the currently open file. FilenameBufferLength of the file name 
    * will be copied into the filename buffer.
@@ -547,8 +716,10 @@ extern  NXstatus  NXsetnumberformat(NXhandle handle, int type, char *format);
    * \param filename The buffer to hold the filename.
    * \param  filenameBufferLength The length of the filename buffer.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_metadata
    */
 extern  NXstatus  NXinquirefile(NXhandle handle, char *filename, int filenameBufferLength);
+
   /**
    * Test if a group is actually pointing to an external file. If so, retrieve the URL of the 
    * external file.
@@ -558,20 +729,51 @@ extern  NXstatus  NXinquirefile(NXhandle handle, char *filename, int filenameBuf
    * \param url A buffer to copy the URL too.
    * \param urlLen The length of the Url buffer. At maximum urlLen bytes will be copied to url.
    * \return NX_OK when the group is pointing to an external file, NX_ERROR else.
+   * \ingroup c_external
    */
 extern  NXstatus  NXisexternalgroup(NXhandle handle, CONSTCHAR *name, CONSTCHAR *nxclass, char *url, int urlLen); 
+
+
   /**
-   * Create a link to an external file. This works by creating a NeXus group under the current level in 
-   * the hierarchy which actually points to a group in  another file. 
+   * Test if a dataset is actually pointing to an external file. If so, retrieve the URL of the 
+   * external file.
    * \param handle A NeXus file handle as initialized by NXopen.
-   * \param name The name of the group which points to the xternal file.
+   * \param name The name of the dataset to test.
+   * \param url A buffer to copy the URL too.
+   * \param urlLen The length of the Url buffer. At maximum urlLen bytes will be copied to url.
+   * \return NX_OK when the dataset is pointing to an external file, NX_ERROR else.
+   * \ingroup c_external
+   */
+extern  NXstatus  NXisexternaldataset(NXhandle handle, CONSTCHAR *name, char *url, int urlLen); 
+
+  /**
+   * Create a link to a group in an external file. This works by creating a NeXus group under the current level in 
+   * the hierarchy which actually points to a group in another file. 
+   * \param handle A NeXus file handle as initialized by NXopen.
+   * \param name The name of the group which points to the external file.
    * \param nxclass The class name of the group which points to the external file.
    * \param url The URL of the external file. Currently only one URL format is supported: nxfile://path-tofile\#path-in-file. 
    * This consists of two parts: the first part is of course the path to the file. The second part, path-in-file, is the 
    * path to the group in the external file which appears in the first file.  
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_external
    */
 extern  NXstatus  NXlinkexternal(NXhandle handle, CONSTCHAR *name, CONSTCHAR *nxclass, CONSTCHAR *url);
+
+
+  /**
+   * Create a link to a dataset in an external file. This works by creating a dataset under the current level in 
+   * the hierarchy which actually points to a dataset in another file. 
+   * \param handle A NeXus file handle as initialized by NXopen.
+   * \param name The name of the dataset which points to the external file.
+   * \param url The URL of the external file. Currently only one URL format is supported: nxfile://path-tofile\#path-in-file. 
+   * This consists of two parts: the first part is of course the path to the file. The second part, path-in-file, is the 
+   * path to the dataset in the external file which appears in the first file.  
+   * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_external
+   */
+extern  NXstatus  NXlinkexternaldataset(NXhandle handle, CONSTCHAR *name, CONSTCHAR *url);
+
   /**
    * Utility function which allocates a suitably sized memory area for the dataset characteristics specified.
    * \param data A pointer to a pointer which will be initialized with a pointer to a suitably sized memory area.
@@ -579,12 +781,29 @@ extern  NXstatus  NXlinkexternal(NXhandle handle, CONSTCHAR *name, CONSTCHAR *nx
    * \param dimensions An array holding the size of the data in each dimension.
    * \param datatype The NeXus data type of the data.
    * \return NX_OK when allocation succeeds, NX_ERROR in the case of an error.   
+   * \ingroup c_memory
    */ 
 extern  NXstatus  NXmalloc(void** data, int rank, int dimensions[], int datatype);
+
+  /**
+   * @copydoc NXmalloc()
+   */ 
+extern  NXstatus  NXmalloc64(void** data, int rank, int64_t dimensions[], int datatype);
+
+
+  /**
+   * Utility function to return NeXus version
+   * \return pointer to string in static storage. Version in
+   * same format as NEXUS_VERSION string in napi.h i.e. "major.minor.patch"
+   * \ingroup c_metadata
+   */
+extern  const char* NXgetversion();
+
   /**
    * Utility function to release the memory for data.
    * \param data A pointer to a pointer to free.
    * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_memory
    */
 extern  NXstatus  NXfree(void** data);
 
@@ -592,6 +811,25 @@ extern  NXstatus  NXfree(void** data);
 /*-----------------------------------------------------------------------
     NAPI internals 
 ------------------------------------------------------------------------*/
+  /**
+   * Retrieve information about the currently open dataset. In contrast to the main function below, 
+   * this function does not try to find out about the size of strings properly. 
+   * \param handle A NeXus file handle as initialized by NXopen.
+   * \param rank A pointer to an integer which will be filled with the rank of 
+   * the dataset.
+   * \param dimension An array which will be initialized with the size of the dataset in any of its 
+   * dimensions. The array must have at least the size of rank.
+   * \param datatype A pointer to an integer which be set to the NeXus data type code for this dataset.
+   * \return NX_OK on success, NX_ERROR in the case of an error.   
+   * \ingroup c_metadata
+   */
+extern  NXstatus  NXgetrawinfo(NXhandle handle, int* rank, int dimension[], int* datatype);
+
+ /**
+  * @copydoc NXgetrawinfo
+  */
+extern  NXstatus  NXgetrawinfo64(NXhandle handle, int* rank, int64_t dimension[], int* datatype);
+
 /** \typedef void (*ErrFunc)(void *data, char *text)
  * All NeXus error reporting happens through this special function, the 
  * ErrFunc. The NeXus-API allows to replace this error reporting function
@@ -601,61 +839,84 @@ extern  NXstatus  NXfree(void** data);
  * \param text The text of the error message to display. 
  */
 typedef void (*ErrFunc)(void *data, char *text);
+
   /**
-   * Set an error function.
-   * \param pData A pointer to a user defined data structure which be passed opaquely to 
+   * Set a global error function.
+   * Not threadsafe.
+   * \param pData A pointer to a user defined data structure which be passed to 
    * the error display function.
    * \param newErr The new error display function.
    */
 extern  void  NXMSetError(void *pData, ErrFunc newErr);
+
+  /**
+   * Set an error function for the current thread.
+   * When used this overrides anything set in NXMSetError (for the current thread).
+   * Use this method in threaded applications.
+   * \param pData A pointer to a user defined data structure which be passed to 
+   * the error display function.
+   * \param newErr The new error display function.
+   */
+extern  void  NXMSetTError(void *pData, ErrFunc newErr);
+
   /**
    * Retrieve the current error display function
-   * \return The current erro display function.
+   * \return The current error display function.
    */
 extern ErrFunc NXMGetError();
+
   /**
    * Suppress error reports from the NeXus-API
    */
 extern  void  NXMDisableErrorReporting();
+
   /**
    * Enable error reports from the NeXus-API
    */
 extern  void  NXMEnableErrorReporting();
 
+ /**
+  * Dispatches the error message to the error function defined by NXMSetTError
+  */
+extern void NXReportError(char *text);
 
-extern void (*NXIReportError)(void *pData,char *text);
-extern void *NXpData;
+ /**
+  * Do not use, first parameter should be set by NXMSetTError
+  */
+extern void NXIReportError(void *pData,char *text);
+/* extern void *NXpData; */
 extern char *NXIformatNeXusTime();
 extern  NXstatus  NXIprintlink(NXhandle fid, NXlink* link);
 
-/*
-  another special function for setting the default cache size for HDF-5
-*/
+/**
+ * A function for setting the default cache size for HDF-5
+ * \ingroup c_init
+ */
 extern  NXstatus  NXsetcache(long newVal);
 
   typedef struct {
         NXhandle pNexusData;   
-        int stripFlag;
+        NXstatus ( *nxreopen)(NXhandle pOrigHandle, NXhandle* pNewHandle);
         NXstatus ( *nxclose)(NXhandle* pHandle);
         NXstatus ( *nxflush)(NXhandle* pHandle);
         NXstatus ( *nxmakegroup) (NXhandle handle, CONSTCHAR *name, CONSTCHAR* NXclass);
         NXstatus ( *nxopengroup) (NXhandle handle, CONSTCHAR *name, CONSTCHAR* NXclass);
         NXstatus ( *nxclosegroup)(NXhandle handle);
-        NXstatus ( *nxmakedata) (NXhandle handle, CONSTCHAR* label, int datatype, int rank, int dim[]);
-        NXstatus ( *nxcompmakedata) (NXhandle handle, CONSTCHAR* label, int datatype, int rank, int dim[], int comp_typ, int bufsize[]);
+        NXstatus ( *nxmakedata64) (NXhandle handle, CONSTCHAR* label, int datatype, int rank, int64_t dim[]);
+        NXstatus ( *nxcompmakedata64) (NXhandle handle, CONSTCHAR* label, int datatype, int rank, int64_t dim[], int comp_typ, int64_t bufsize[]);
         NXstatus ( *nxcompress) (NXhandle handle, int compr_type);
         NXstatus ( *nxopendata) (NXhandle handle, CONSTCHAR* label);
         NXstatus ( *nxclosedata)(NXhandle handle);
         NXstatus ( *nxputdata)(NXhandle handle, void* data);
         NXstatus ( *nxputattr)(NXhandle handle, CONSTCHAR* name, void* data, int iDataLen, int iType);
-        NXstatus ( *nxputslab)(NXhandle handle, void* data, int start[], int size[]);    
+        NXstatus ( *nxputslab64)(NXhandle handle, void* data, int64_t start[], int64_t size[]);    
         NXstatus ( *nxgetdataID)(NXhandle handle, NXlink* pLink);
         NXstatus ( *nxmakelink)(NXhandle handle, NXlink* pLink);
         NXstatus ( *nxmakenamedlink)(NXhandle handle, CONSTCHAR *newname, NXlink* pLink);
         NXstatus ( *nxgetdata)(NXhandle handle, void* data);
-        NXstatus ( *nxgetinfo)(NXhandle handle, int* rank, int dimension[], int* datatype);
+        NXstatus ( *nxgetinfo64)(NXhandle handle, int* rank, int64_t dimension[], int* datatype);
         NXstatus ( *nxgetnextentry)(NXhandle handle, NXname name, NXname nxclass, int* datatype);
-        NXstatus ( *nxgetslab)(NXhandle handle, void* data, int start[], int size[]);
+        NXstatus ( *nxgetslab64)(NXhandle handle, void* data, const int64_t start[], const int64_t size[]);
         NXstatus ( *nxgetnextattr)(NXhandle handle, NXname pName, int *iLength, int *iType);
         NXstatus ( *nxgetattr)(NXhandle handle, char* name, void* data, int* iDataLen, int* iType);
         NXstatus ( *nxgetattrinfo)(NXhandle handle, int* no_items);
@@ -666,6 +927,11 @@ extern  NXstatus  NXsetcache(long newVal);
         NXstatus ( *nxinitattrdir)(NXhandle handle);
         NXstatus ( *nxsetnumberformat)(NXhandle handle, int type, char *format);
         NXstatus ( *nxprintlink)(NXhandle handle, NXlink* link);
+        NXstatus ( *nxnativeexternallink)(NXhandle handle, CONSTCHAR* name, CONSTCHAR* externalfile, CONSTCHAR* remotetarget);
+        NXstatus ( *nxnativeinquirefile)(NXhandle handle, char* externalfile, const int filenamelength);
+        NXstatus ( *nxnativeisexternallink)(NXhandle handle, CONSTCHAR* name, char* url, int urllen);
+        int stripFlag;
+        int checkNameSyntax;
   } NexusFunction, *pNexusFunction;
   /*---------------------*/
   extern long nx_cacheSize;
@@ -673,8 +939,8 @@ extern  NXstatus  NXsetcache(long newVal);
 /* FORTRAN internals */
 
   extern NXstatus  NXfopen(char * filename, NXaccess* am, 
-					NexusFunction* pHandle);
-  extern NXstatus  NXfclose (NexusFunction* pHandle);
+					NXhandle pHandle);
+  extern NXstatus  NXfclose (NXhandle pHandle);
   extern NXstatus  NXfputattr(NXhandle fid, char *name, void *data, 
                                    int *pDatalen, int *pIType);
   extern NXstatus  NXfcompress(NXhandle fid, int *compr_type);
@@ -684,11 +950,21 @@ extern  NXstatus  NXsetcache(long newVal);
                 int *compression_type, int chunk[]);
   extern NXstatus  NXfmakedata(NXhandle fid, char *name, int *pDatatype,
 		int *pRank, int dimensions[]);
-  extern NXstatus  NXfflush(NexusFunction* pHandle);
-
+  extern NXstatus  NXfflush(NXhandle pHandle);
+  extern NXstatus  NXfgetpath(NXhandle fid, char *path, int *pathlen);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /*NEXUSAPI*/
+/**
+ * Freddie Akeroyd 11/8/2009
+ * Add NeXus schema support - this uses BASE.xsd as the initial file
+ */
+#define NEXUS_SCHEMA_VERSION	"3.1" 	/**< version of NeXus definition schema */
+#define NEXUS_SCHEMA_ROOT 	"http://definition.nexusformat.org/schema/" 	/**< XML schema namespace specified by xmlns */
+#define NEXUS_SCHEMA_NAMESPACE 	NEXUS_SCHEMA_ROOT NEXUS_SCHEMA_VERSION 	/**< XML schema namespace specified by xmlns */
+#define NEXUS_SCHEMA_BASE 	"BASE"
+#define NEXUS_SCHEMA_FILE 	NEXUS_SCHEMA_BASE ".xsd" /**< default schema file for namespace */
+#define NEXUS_SCHEMA_URL 	NEXUS_SCHEMA_NAMESPACE "/" NEXUS_SCHEMA_FILE /**< location of default schema file for namespace */
 
+#endif /*NEXUSAPI*/
