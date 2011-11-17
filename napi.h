@@ -21,7 +21,7 @@
  
   For further information, see <http://www.nexusformat.org>
   
-  $Id: napi.h 1747 2011-11-08 16:13:19Z Freddie Akeroyd $
+  $Id: napi.h 1768 2011-11-17 16:40:12Z Freddie Akeroyd $
 
  ----------------------------------------------------------------------------*/
 /** \file 
@@ -57,17 +57,6 @@
 #define NEXUS_VERSION   "4.3.0"                /* major.minor.patch */
 
 #define CONSTCHAR       const char
-
-#ifdef _MSC_VER
-#define snprintf nxisnprintf
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-extern int nxisnprintf(char* buffer, int len, const char* format, ... );
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-#endif /* _MSC_VER */
 
 typedef void* NXhandle;         /* really a pointer to a NexusFile structure */
 typedef int NXstatus;
