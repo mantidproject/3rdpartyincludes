@@ -1,4 +1,4 @@
-// This defines the interface to the QsciLexerCSharp class.
+// This defines the interface to the QsciLexerOctave class.
 //
 // Copyright (c) 2011 Riverbank Computing Limited <info@riverbankcomputing.com>
 // 
@@ -23,8 +23,8 @@
 // WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
 
-#ifndef QSCILEXERCSHARP_H
-#define QSCILEXERCSHARP_H
+#ifndef QSCILEXEROCTAVE_H
+#define QSCILEXEROCTAVE_H
 
 #ifdef __APPLE__
 extern "C++" {
@@ -33,54 +33,37 @@ extern "C++" {
 #include <qobject.h>
 
 #include <Qsci/qsciglobal.h>
-#include <Qsci/qscilexercpp.h>
+#include <Qsci/qscilexermatlab.h>
 
 
-//! \brief The QsciLexerCSharp class encapsulates the Scintilla C#
+//! \brief The QsciLexerOctave class encapsulates the Scintilla Octave file
 //! lexer.
-class QSCINTILLA_EXPORT QsciLexerCSharp : public QsciLexerCPP
+class QSCINTILLA_EXPORT QsciLexerOctave : public QsciLexerMatlab
 {
     Q_OBJECT
 
 public:
-    //! Construct a QsciLexerCSharp with parent \a parent.  \a parent is
+    //! Construct a QsciLexerOctave with parent \a parent.  \a parent is
     //! typically the QsciScintilla instance.
-    QsciLexerCSharp(QObject *parent = 0);
+    QsciLexerOctave(QObject *parent = 0);
 
-    //! Destroys the QsciLexerCSharp instance.
-    virtual ~QsciLexerCSharp();
+    //! Destroys the QsciLexerOctave instance.
+    virtual ~QsciLexerOctave();
 
     //! Returns the name of the language.
     const char *language() const;
 
-    //! Returns the foreground colour of the text for style number \a style.
-    //!
-    //! \sa defaultPaper()
-    QColor defaultColor(int style) const;
-
-    //! Returns the end-of-line fill for style number \a style.
-    bool defaultEolFill(int style) const;
-
-    //! Returns the font for style number \a style.
-    QFont defaultFont(int style) const;
-
-    //! Returns the background colour of the text for style number \a style.
-    //!
-    //! \sa defaultColor()
-    QColor defaultPaper(int style) const;
+    //! Returns the name of the lexer.  Some lexers support a number of
+    //! languages.
+    const char *lexer() const;
 
     //! Returns the set of keywords for the keyword set \a set recognised
     //! by the lexer as a space separated string.
     const char *keywords(int set) const;
 
-    //! Returns the descriptive name for style number \a style.  If the
-    //! style is invalid for this language then an empty QString is returned.
-    //! This is intended to be used in user preference dialogs.
-    QString description(int style) const;
-
 private:
-    QsciLexerCSharp(const QsciLexerCSharp &);
-    QsciLexerCSharp &operator=(const QsciLexerCSharp &);
+    QsciLexerOctave(const QsciLexerOctave &);
+    QsciLexerOctave &operator=(const QsciLexerOctave &);
 };
 
 #ifdef __APPLE__

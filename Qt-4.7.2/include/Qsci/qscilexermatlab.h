@@ -1,4 +1,4 @@
-// This defines the interface to the QsciLexerCSharp class.
+// This defines the interface to the QsciLexerMatlab class.
 //
 // Copyright (c) 2011 Riverbank Computing Limited <info@riverbankcomputing.com>
 // 
@@ -23,8 +23,8 @@
 // WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
 
-#ifndef QSCILEXERCSHARP_H
-#define QSCILEXERCSHARP_H
+#ifndef QSCILEXERMATLAB_H
+#define QSCILEXERMATLAB_H
 
 #ifdef __APPLE__
 extern "C++" {
@@ -33,41 +33,68 @@ extern "C++" {
 #include <qobject.h>
 
 #include <Qsci/qsciglobal.h>
-#include <Qsci/qscilexercpp.h>
+#include <Qsci/qscilexer.h>
 
 
-//! \brief The QsciLexerCSharp class encapsulates the Scintilla C#
+//! \brief The QsciLexerMatlab class encapsulates the Scintilla Matlab file
 //! lexer.
-class QSCINTILLA_EXPORT QsciLexerCSharp : public QsciLexerCPP
+class QSCINTILLA_EXPORT QsciLexerMatlab : public QsciLexer
 {
     Q_OBJECT
 
 public:
-    //! Construct a QsciLexerCSharp with parent \a parent.  \a parent is
-    //! typically the QsciScintilla instance.
-    QsciLexerCSharp(QObject *parent = 0);
+    //! This enum defines the meanings of the different styles used by the
+    //! Matlab file lexer.
+    enum {
+        //! The default.
+        Default = 0,
 
-    //! Destroys the QsciLexerCSharp instance.
-    virtual ~QsciLexerCSharp();
+        //! A comment.
+        Comment = 1,
+
+        //! A command.
+        Command = 2,
+
+        //! A number.
+        Number = 3,
+
+        //! A keyword.
+        Keyword = 4,
+
+        //! A single quoted string.
+        SingleQuotedString = 5,
+
+        //! An operator
+        Operator = 6,
+
+        //! An identifier.
+        Identifier = 7,
+
+        //! A double quoted string.
+        DoubleQuotedString = 8
+    };
+
+    //! Construct a QsciLexerMatlab with parent \a parent.  \a parent is
+    //! typically the QsciScintilla instance.
+    QsciLexerMatlab(QObject *parent = 0);
+
+    //! Destroys the QsciLexerMatlab instance.
+    virtual ~QsciLexerMatlab();
 
     //! Returns the name of the language.
     const char *language() const;
+
+    //! Returns the name of the lexer.  Some lexers support a number of
+    //! languages.
+    const char *lexer() const;
 
     //! Returns the foreground colour of the text for style number \a style.
     //!
     //! \sa defaultPaper()
     QColor defaultColor(int style) const;
 
-    //! Returns the end-of-line fill for style number \a style.
-    bool defaultEolFill(int style) const;
-
     //! Returns the font for style number \a style.
     QFont defaultFont(int style) const;
-
-    //! Returns the background colour of the text for style number \a style.
-    //!
-    //! \sa defaultColor()
-    QColor defaultPaper(int style) const;
 
     //! Returns the set of keywords for the keyword set \a set recognised
     //! by the lexer as a space separated string.
@@ -79,8 +106,8 @@ public:
     QString description(int style) const;
 
 private:
-    QsciLexerCSharp(const QsciLexerCSharp &);
-    QsciLexerCSharp &operator=(const QsciLexerCSharp &);
+    QsciLexerMatlab(const QsciLexerMatlab &);
+    QsciLexerMatlab &operator=(const QsciLexerMatlab &);
 };
 
 #ifdef __APPLE__
