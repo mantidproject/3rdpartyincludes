@@ -28,17 +28,17 @@
 
 /////////////////// Subversion Repository Details ////////////////////////
 // Repository Location     $HeadURL: https://svn.nexusformat.org/code/trunk/bindings/cpp/NeXusStream.hpp $
-// Revision of last commit $LastChangedRevision: 1536 $ 
-// Date of last commit     $LastChangedDate: 2010-10-06 15:15:01 +0100 (Wed, 06 Oct 2010) $
-// Last changed by         $LastChangedBy: Reuterma $
+// Revision of last commit $LastChangedRevision: 1772 $ 
+// Date of last commit     $LastChangedDate: 2011-11-22 16:58:21 +0000 (Tue, 22 Nov 2011) $
+// Last changed by         $LastChangedBy: Freddie Akeroyd $
 //////////////////////////////////////////////////////////////////////////
 
 /**
  * \file NeXusStream.hpp
  * Header for IOStream like interface to NeXus files
  * \author Freddie Akeroyd, STFC ISIS Facility, GB
- * \version $LastChangedRevision: 1536 $
- * \date    $LastChangedDate: 2010-10-06 15:15:01 +0100 (Wed, 06 Oct 2010) $
+ * \version $LastChangedRevision: 1772 $
+ * \date    $LastChangedDate: 2011-11-22 16:58:21 +0000 (Tue, 22 Nov 2011) $
  * \defgroup cpp_stream IOstream like interface
  * \ingroup cpp_main
  */
@@ -128,7 +128,7 @@ namespace Stream
 	Attr(const std::string& name, Attr& d) { m_holder = d.m_holder->clone(); setName(name); }
 	Attr(const std::string& name, const Attr& d) { m_holder = d.m_holder->clone(); setName(name); }
         Attr(const Attr& a) : m_holder(NULL) {  m_holder = a.m_holder->clone(); }
-	Attr& operator=(const Attr& a) { if (this != &a) { delete m_holder; m_holder = a.m_holder->clone(); return *this; } }
+	Attr& operator=(const Attr& a) { if (this != &a) { delete m_holder; m_holder = a.m_holder->clone(); } return *this; }
 	void setName(const std::string& name) { m_holder->setName(name); }
 	virtual void readFromFile(File& nf) const { m_holder->readFromFile(nf); }
 	virtual void writeToFile(File& nf) const { m_holder->writeToFile(nf); }
@@ -267,7 +267,7 @@ namespace Stream
 	    m_holder = new DataHolder<NumT>(name, data);
 	  }
 	Data(const Data& d) : ObjectWithAttr(d), m_holder(NULL) { m_holder = d.m_holder->clone(); }
-	Data& operator=(const Data& d) { if (this != &d) { delete m_holder; m_holder = d.m_holder->clone(); return *this; } }
+	Data& operator=(const Data& d) { if (this != &d) { delete m_holder; m_holder = d.m_holder->clone(); } return *this; }
 	virtual void readFromFile(File& nf) const;
 	virtual void writeToFile(File& nf) const;
 	virtual ~Data() { delete m_holder; }
