@@ -14,29 +14,19 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Scott Wegner <swegner@hdfgroup.org>
- *				Based on code by Robb Matzke
- *              Thursday, May 24 2007
- *
- * Purpose:	The public header file for the windows driver.
+ * This is the main public HDF5 High Level include file.  Put further
+ * information in a particular header file and include that here, don't
+ * fill this file with lots of gunk...
  */
-#ifndef H5FDwindows_H
-#define H5FDwindows_H
 
-#include "H5Ipublic.h"
+#ifndef _HDF5_HL_H
+#define _HDF5_HL_H
 
-#define H5FD_WINDOWS	(H5FD_windows_init())
+#include "H5DSpublic.h" /* dimension scales */
+#include "H5LTpublic.h" /* lite */
+#include "H5IMpublic.h" /* image */
+#include "H5TBpublic.h" /* table */
+#include "H5PTpublic.h" /* table */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#endif /*H5_INCLUDE_HL*/
 
-H5_DLL hid_t H5FD_windows_init(void);
-H5_DLL void H5FD_windows_term(void);
-H5_DLL herr_t H5Pset_fapl_windows(hid_t fapl_id);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
