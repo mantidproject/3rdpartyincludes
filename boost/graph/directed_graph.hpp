@@ -7,7 +7,6 @@
 #ifndef BOOST_GRAPH_DIRECTED_GRAPH_HPP
 #define BOOST_GRAPH_DIRECTED_GRAPH_HPP
 
-#include <boost/utility.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/properties.hpp>
 
@@ -33,10 +32,12 @@ template <
 class directed_graph
 {
 public:
-    typedef typename graph_detail::vertex_prop<VertexProp>::type vertex_property_type;
-    typedef typename graph_detail::vertex_prop<VertexProp>::bundle vertex_bundled;
-    typedef typename graph_detail::edge_prop<EdgeProp>::type edge_property_type;
-    typedef typename graph_detail::edge_prop<EdgeProp>::bundle edge_bundled;
+    typedef GraphProp graph_property_type;
+    typedef VertexProp vertex_property_type;
+    typedef EdgeProp edge_property_type;
+    typedef typename lookup_one_property<GraphProp, graph_bundle_t>::type graph_bundled;
+    typedef typename lookup_one_property<VertexProp, vertex_bundle_t>::type vertex_bundled;
+    typedef typename lookup_one_property<EdgeProp, edge_bundle_t>::type edge_bundled;
 
 private:
     // Wrap the user-specified properties with an index.
@@ -58,9 +59,6 @@ private:
     typedef typename graph_type::directed_selector directed_selector;
 
 public:
-    typedef directed_graph_tag graph_tag;
-    typedef typename graph_type::graph_property_type graph_property_type;
-
     // more commonly used graph types
     typedef typename graph_type::stored_vertex stored_vertex;
     typedef typename graph_type::vertices_size_type vertices_size_type;
@@ -77,6 +75,7 @@ public:
     typedef typename graph_type::adjacency_iterator adjacency_iterator;
 
     // miscellaneous types
+    typedef directed_graph_tag graph_tag;
     typedef typename graph_type::directed_category directed_category;
     typedef typename graph_type::edge_parallel_category edge_parallel_category;
     typedef typename graph_type::traversal_category traversal_category;
@@ -194,7 +193,7 @@ public:
         // find all edges, (u, v)
         std::vector<edge_descriptor> edges;
         out_edge_iterator i, i_end;
-        for(tie(i, i_end) = boost::out_edges(u, m_graph); i != i_end; ++i) {
+        for(boost::tie(i, i_end) = boost::out_edges(u, m_graph); i != i_end; ++i) {
             if(boost::target(*i, m_graph) == v) {
                 edges.push_back(*i);
             }
@@ -225,7 +224,7 @@ public:
     renumber_vertex_indices()
     {
         vertex_iterator i, end;
-        tie(i, end) = vertices(m_graph);
+        boost::tie(i, end) = vertices(m_graph);
         m_max_vertex_index = renumber_vertex_indices(i, end, 0);
     }
 
@@ -248,7 +247,7 @@ public:
     renumber_edge_indices()
     {
         edge_iterator i, end;
-        tie(i, end) = edges(m_graph);
+        boost::tie(i, end) = edges(m_graph);
         m_max_edge_index = renumber_edge_indices(i, end, 0);
     }
 
@@ -283,6 +282,12 @@ public:
 
     edge_bundled const& operator[](edge_descriptor e) const
     { return m_graph[e]; }
+
+    graph_bundled& operator[](graph_bundle_t)
+    { return get_property(*this); }
+
+    graph_bundled const& operator[](graph_bundle_t) const
+    { return get_property(*this); }
 #endif
 
     // Graph concepts
@@ -345,14 +350,12 @@ private:
 // IncidenceGraph concepts
 template <DIRECTED_GRAPH_PARAMS>
 inline typename DIRECTED_GRAPH::vertex_descriptor
-source(typename DIRECTED_GRAPH::edge_descriptor e,
-    DIRECTED_GRAPH const& g)
+source(typename DIRECTED_GRAPH::edge_descriptor e, DIRECTED_GRAPH const& g)
 { return source(e, g.impl()); }
 
 template <DIRECTED_GRAPH_PARAMS>
 inline typename DIRECTED_GRAPH::vertex_descriptor
-target(typename DIRECTED_GRAPH::edge_descriptor e,
-    DIRECTED_GRAPH const& g)
+target(typename DIRECTED_GRAPH::edge_descriptor e, DIRECTED_GRAPH const& g)
 { return target(e, g.impl()); }
 
 template <DIRECTED_GRAPH_PARAMS>
@@ -404,7 +407,7 @@ template <DIRECTED_GRAPH_PARAMS>
 typename DIRECTED_GRAPH::vertex_descriptor
 vertex(typename DIRECTED_GRAPH::vertices_size_type n,
        DIRECTED_GRAPH const& g)
-{ return vertex(g.impl()); }
+{ return vertex(n, g.impl()); }
 
 template <DIRECTED_GRAPH_PARAMS>
 std::pair<typename DIRECTED_GRAPH::edge_descriptor, bool>
@@ -583,35 +586,6 @@ template <DIRECTED_GRAPH_PARAMS, class Property, class Value>
 void
 set_property(DIRECTED_GRAPH& g, Property p, Value v)
 { return set_property(g.impl(), p, v); }
-
-#ifndef BOOST_GRAPH_NO_BUNDLED_PROPERTIES
-
-template <DIRECTED_GRAPH_PARAMS, typename Type, typename Bundle>
-inline typename property_map<DIRECTED_GRAPH, Type Bundle::*>::type
-get(Type Bundle::* p, DIRECTED_GRAPH& g) {
-    typedef typename property_map<
-        DIRECTED_GRAPH, Type Bundle::*
-    >::type return_type;
-    return return_type(&g, p);
-}
-
-template <DIRECTED_GRAPH_PARAMS, typename Type, typename Bundle>
-inline typename property_map<DIRECTED_GRAPH, Type Bundle::*>::const_type
-get(Type Bundle::* p, DIRECTED_GRAPH const& g) {
-    typedef typename property_map<
-        DIRECTED_GRAPH, Type Bundle::*
-    >::const_type return_type;
-    return return_type(&g, p);
-}
-
-template <DIRECTED_GRAPH_PARAMS, typename Type, typename Bundle, typename Key>
-inline Type get(Type Bundle::* p, DIRECTED_GRAPH const& g, Key const& k)
-{ return get(p, g.impl(), k); }
-
-template <DIRECTED_GRAPH_PARAMS, typename Type, typename Bundle, typename Key, typename Value>
-inline void put(Type Bundle::* p, DIRECTED_GRAPH& g, Key const& k, Value const& v)
-{ put(p, g.impl(), k, v); }
-#endif
 
 // Vertex index management
 

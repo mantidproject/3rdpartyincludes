@@ -17,7 +17,7 @@
 #include <boost/detail/workaround.hpp>
 #include <boost/operators.hpp>
 #include <boost/property_map/property_map.hpp>
-#include <boost/pending/integer_range.hpp>
+#include <boost/range/irange.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <memory>
 #include <algorithm>
@@ -35,11 +35,7 @@
 #include <boost/pending/property.hpp>
 #include <boost/graph/adjacency_iterator.hpp>
 #include <boost/static_assert.hpp>
-
-// Symbol truncation problems with MSVC, trying to shorten names.
-#define stored_edge se_
-#define stored_edge_property sep_
-#define stored_edge_iter sei_
+#include <boost/assert.hpp>
 
 /*
   Outline for this file:
@@ -65,11 +61,6 @@
   bidirectional code... it is awful similar.
  */
 
-
-#if BOOST_WORKAROUND(BOOST_MSVC, < 1300)
-// Stay out of the way of the concept checking class
-# define Graph Graph_
-#endif
 
 namespace boost {
 
@@ -592,7 +583,7 @@ namespace boost {
       typedef typename Config::graph_type graph_type;
       graph_type& g = static_cast<graph_type&>(g_);
       typename Config::out_edge_iterator first, last;
-      tie(first, last) = out_edges(u, g);
+      boost::tie(first, last) = out_edges(u, g);
       typedef typename Config::edge_parallel_category edge_parallel_category;
       detail::remove_directed_edge_if_dispatch
         (first, last, g.out_edge_list(u), pred, edge_parallel_category());
@@ -606,7 +597,7 @@ namespace boost {
       graph_type& g = static_cast<graph_type&>(g_);
 
       typename Config::vertex_iterator vi, vi_end;
-      for (tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi)
+      for (boost::tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi)
         remove_out_edge_if(*vi, pred, g);
     }
 
@@ -726,8 +717,10 @@ namespace boost {
 
           typename Config::OutEdgeList& out_el = g.out_edge_list(source(e, g));
           typename Config::OutEdgeList::iterator out_i = out_el.begin();
+          typename Config::EdgeIter edge_iter_to_erase;
           for (; out_i != out_el.end(); ++out_i)
             if (&(*out_i).get_property() == &p) {
+              edge_iter_to_erase = (*out_i).get_iter();
               out_el.erase(out_i);
               break;
             }
@@ -735,10 +728,10 @@ namespace boost {
           typename Config::OutEdgeList::iterator in_i = in_el.begin();
           for (; in_i != in_el.end(); ++in_i)
             if (&(*in_i).get_property() == &p) {
-              g.m_edges.erase((*in_i).get_iter());
               in_el.erase(in_i);
-              return;
+              break;
             }
+          g.m_edges.erase(edge_iter_to_erase);
         }
       };
 
@@ -759,8 +752,10 @@ namespace boost {
           no_property* p = (no_property*)e.get_property();
           typename Config::OutEdgeList& out_el = g.out_edge_list(source(e, g));
           typename Config::OutEdgeList::iterator out_i = out_el.begin();
+          typename Config::EdgeIter edge_iter_to_erase;
           for (; out_i != out_el.end(); ++out_i)
             if (&(*out_i).get_property() == p) {
+              edge_iter_to_erase = (*out_i).get_iter();
               out_el.erase(out_i);
               break;
             }
@@ -768,10 +763,10 @@ namespace boost {
           typename Config::OutEdgeList::iterator in_i = in_el.begin();
           for (; in_i != in_el.end(); ++in_i)
             if (&(*in_i).get_property() == p) {
-              g.m_edges.erase((*in_i).get_iter());
               in_el.erase(in_i);
-              return;
+              break;
             }
+          g.m_edges.erase(edge_iter_to_erase);
         }
       };
 
@@ -810,6 +805,7 @@ namespace boost {
 
         typedef typename EdgeList::value_type StoredEdge;
         typename EdgeList::iterator i = el.find(StoredEdge(v)), end = el.end();
+        BOOST_ASSERT ((i != end));
         if (i != end) {
           g.m_edges.erase((*i).get_iter());
           el.erase(i);
@@ -921,7 +917,7 @@ namespace boost {
       typedef typename Config::OutEdgeList::value_type::property_type PropT;
       graph_type& g = static_cast<graph_type&>(g_);
       typename Config::out_edge_iterator first, last;
-      tie(first, last) = out_edges(u, g);
+      boost::tie(first, last) = out_edges(u, g);
       typedef typename Config::edge_parallel_category Cat;
       detail::undirected_remove_out_edge_if_dispatch<PropT>
         (g, first, last, g.out_edge_list(u), pred, Cat());
@@ -948,7 +944,7 @@ namespace boost {
       typedef typename Config::graph_type graph_type;
       graph_type& g = static_cast<graph_type&>(g_);
       typename Config::edge_iterator ei, ei_end, next;
-      tie(ei, ei_end) = edges(g);
+      boost::tie(ei, ei_end) = edges(g);
       for (next = ei; ei != ei_end; ei = next) {
         ++next;
         if (pred(*ei))
@@ -990,15 +986,12 @@ namespace boost {
       typedef typename Config::graph_type graph_type;
       typedef typename Config::edge_parallel_category Cat;
       graph_type& g = static_cast<graph_type&>(g_);
-      typename Config::OutEdgeList& el = g.out_edge_list(u);
-      typename Config::OutEdgeList::iterator
-        ei = el.begin(), ei_end = el.end();
-      for (; ei != ei_end; ++ei) {
-        detail::erase_from_incidence_list
-          (g.out_edge_list((*ei).get_target()), u, Cat());
-        g.m_edges.erase((*ei).get_iter());
+      while (true) {
+        typename Config::out_edge_iterator ei, ei_end;
+        boost::tie(ei, ei_end) = out_edges(u, g);
+        if (ei == ei_end) break;
+        remove_edge(*ei, g);
       }
-      g.out_edge_list(u).clear();
     }
     // O(1) for allow_parallel_edge_tag
     // O(log(E/V)) for disallow_parallel_edge_tag
@@ -1118,7 +1111,7 @@ namespace boost {
       typedef typename Config::graph_type graph_type;
       graph_type& g = static_cast<graph_type&>(g_);
       typename Config::edge_iterator ei, ei_end, next;
-      tie(ei, ei_end) = edges(g);
+      boost::tie(ei, ei_end) = edges(g);
       for (next = ei; ei != ei_end; ei = next) {
         ++next;
         if (pred(*ei))
@@ -1207,7 +1200,7 @@ namespace boost {
         std::pair<out_edge_iterator, out_edge_iterator> rng =
           get_parallel_edge_sublist(e, g, (OutEdgeListS*)(0));
         rng.first = std::find(rng.first, rng.second, e);
-        assert(rng.first != rng.second);
+        BOOST_ASSERT(rng.first != rng.second);
         remove_edge(rng.first);
       }
 
@@ -1279,7 +1272,7 @@ namespace boost {
       // First remove the edges from the targets' in-edge lists and
       // from the graph's edge set list.
       typename Config::out_edge_iterator out_i, out_end;
-      for (tie(out_i, out_end) = out_edges(u, g); out_i != out_end; ++out_i)
+      for (boost::tie(out_i, out_end) = out_edges(u, g); out_i != out_end; ++out_i)
         if (pred(*out_i)) {
           detail::remove_directed_edge_dispatch
             (*out_i, in_edge_list(g, target(*out_i, g)),
@@ -1291,7 +1284,7 @@ namespace boost {
 
       // Now remove the edges from this out-edge list.
       typename Config::out_edge_iterator first, last;
-      tie(first, last) = out_edges(u, g);
+      boost::tie(first, last) = out_edges(u, g);
       typedef typename Config::edge_parallel_category Cat;
       detail::remove_directed_edge_if_dispatch
         (first, last, g.out_edge_list(u), pred, Cat());
@@ -1320,7 +1313,7 @@ namespace boost {
       // First remove the edges from the sources' out-edge lists and
       // from the graph's edge set list.
       typename Config::in_edge_iterator in_i, in_end;
-      for (tie(in_i, in_end) = in_edges(v, g); in_i != in_end; ++in_i)
+      for (boost::tie(in_i, in_end) = in_edges(v, g); in_i != in_end; ++in_i)
         if (pred(*in_i)) {
           typename Config::vertex_descriptor u = source(*in_i, g);
           detail::remove_directed_edge_dispatch
@@ -1331,7 +1324,7 @@ namespace boost {
         }
       // Now remove the edges from this in-edge list.
       typename Config::in_edge_iterator first, last;
-      tie(first, last) = in_edges(v, g);
+      boost::tie(first, last) = in_edges(v, g);
       typedef typename Config::edge_parallel_category Cat;
       detail::remove_directed_edge_if_dispatch
         (first, last, in_edge_list(g, v), pred, Cat());
@@ -1501,55 +1494,16 @@ namespace boost {
       typedef typename Config::edges_size_type edges_size_type;
       typedef typename Config::degree_size_type degree_size_type;
       typedef typename Config::StoredEdge StoredEdge;
+      typedef typename Config::vertex_property_type vertex_property_type;
       typedef typename Config::edge_property_type edge_property_type;
+      typedef typename Config::graph_property_type graph_property_type;
 
       typedef typename Config::global_edgelist_selector
         global_edgelist_selector;
 
-      //    protected:
-
-      // The edge_dispatch() functions should be static, but
-      // Borland gets confused about constness.
-
-      // O(E/V)
-      inline std::pair<edge_descriptor,bool>
-      edge_dispatch(const AdjList& g,
-                    vertex_descriptor u, vertex_descriptor v,
-                    boost::allow_parallel_edge_tag) const
-      {
-        bool found;
-        const typename Config::OutEdgeList& el = g.out_edge_list(u);
-        typename Config::OutEdgeList::const_iterator
-          i = std::find_if(el.begin(), el.end(),
-                           detail::target_is<vertex_descriptor>(v));
-        found = (i != g.out_edge_list(u).end());
-        if (found)
-          return std::make_pair(edge_descriptor(u, v, &(*i).get_property()),
-                                true);
-        else
-          return std::make_pair(edge_descriptor(u, v, 0), false);
-      }
-      // O(log(E/V))
-      inline std::pair<edge_descriptor,bool>
-      edge_dispatch(const AdjList& g,
-                    vertex_descriptor u, vertex_descriptor v,
-                    boost::disallow_parallel_edge_tag) const
-      {
-        bool found;
-        /* According to the standard, this should be iterator, not const_iterator,
-           but the VC++ std::set::find() const returns const_iterator.
-           And since iterator should be convertible to const_iterator, the
-           following should work everywhere. -Jeremy */
-        typename Config::OutEdgeList::const_iterator
-          i = g.out_edge_list(u).find(StoredEdge(v)),
-          end = g.out_edge_list(u).end();
-        found = (i != end);
-        if (found)
-          return std::make_pair(edge_descriptor(u, v, &(*i).get_property()),
-                                true);
-        else
-          return std::make_pair(edge_descriptor(u, v, 0), false);
-      }
+      typedef typename lookup_one_property<vertex_property_type, vertex_bundle_t>::type vertex_bundled;
+      typedef typename lookup_one_property<edge_property_type, edge_bundle_t>::type edge_bundled;
+      typedef typename lookup_one_property<graph_property_type, graph_bundle_t>::type graph_bundled;
     };
 
     template <class Config, class Base>
@@ -1630,9 +1584,16 @@ namespace boost {
          const adj_list_helper<Config, Base>& g_)
     {
       typedef typename Config::graph_type Graph;
-      typedef typename Config::edge_parallel_category Cat;
-      const Graph& g = static_cast<const Graph&>(g_);
-      return g_.edge_dispatch(g, u, v, Cat());
+      typedef typename Config::StoredEdge StoredEdge;
+      const Graph& cg = static_cast<const Graph&>(g_);
+      typedef typename Config::out_edge_iterator out_edge_iterator;
+      const typename Config::OutEdgeList& el = cg.out_edge_list(u);
+      typename Config::OutEdgeList::const_iterator it = graph_detail::
+        find(el, StoredEdge(v));
+      return std::make_pair(
+               typename Config::edge_descriptor
+                     (u, v, (it == el.end() ? 0 : &(*it).get_property())),
+               (it != el.end()));
     }
 
     template <class Config, class Base>
@@ -1650,7 +1611,7 @@ namespace boost {
       typename Config::OutEdgeList& el = g.out_edge_list(u);
       typename Config::OutEdgeList::iterator first, last;
       typename Config::EdgeContainer fake_edge_container;
-      tie(first, last) = graph_detail::
+      boost::tie(first, last) = graph_detail::
         equal_range(el, StoredEdge(v, fake_edge_container.end(),
                                    &fake_edge_container));
       return std::make_pair(out_edge_iterator(first, u),
@@ -1673,43 +1634,43 @@ namespace boost {
       inline
       typename boost::property_map<typename Config::graph_type,
         Property>::type
-      get_dispatch(adj_list_helper<Config,Base>&, Property,
+      get_dispatch(adj_list_helper<Config,Base>&, Property p,
                    boost::edge_property_tag) {
         typedef typename Config::graph_type Graph;
         typedef typename boost::property_map<Graph, Property>::type PA;
-        return PA();
+        return PA(p);
       }
       template <class Config, class Base, class Property>
       inline
       typename boost::property_map<typename Config::graph_type,
         Property>::const_type
-      get_dispatch(const adj_list_helper<Config,Base>&, Property,
+      get_dispatch(const adj_list_helper<Config,Base>&, Property p,
                    boost::edge_property_tag) {
         typedef typename Config::graph_type Graph;
         typedef typename boost::property_map<Graph, Property>::const_type PA;
-        return PA();
+        return PA(p);
       }
 
       template <class Config, class Base, class Property>
       inline
       typename boost::property_map<typename Config::graph_type,
         Property>::type
-      get_dispatch(adj_list_helper<Config,Base>& g, Property,
+      get_dispatch(adj_list_helper<Config,Base>& g, Property p,
                    boost::vertex_property_tag) {
         typedef typename Config::graph_type Graph;
         typedef typename boost::property_map<Graph, Property>::type PA;
-        return PA(&static_cast<Graph&>(g));
+        return PA(&static_cast<Graph&>(g), p);
       }
       template <class Config, class Base, class Property>
       inline
       typename boost::property_map<typename Config::graph_type,
         Property>::const_type
-      get_dispatch(const adj_list_helper<Config, Base>& g, Property,
+      get_dispatch(const adj_list_helper<Config, Base>& g, Property p,
                    boost::vertex_property_tag) {
         typedef typename Config::graph_type Graph;
         typedef typename boost::property_map<Graph, Property>::const_type PA;
         const Graph& cg = static_cast<const Graph&>(g);
-        return PA(&cg);
+        return PA(&cg, p);
       }
 
     } // namespace detail
@@ -1719,7 +1680,7 @@ namespace boost {
     inline
     typename boost::property_map<typename Config::graph_type, Property>::type
     get(Property p, adj_list_helper<Config, Base>& g) {
-      typedef typename property_kind<Property>::type Kind;
+      typedef typename detail::property_kind_from_graph<adj_list_helper<Config, Base>, Property>::type Kind;
       return detail::get_dispatch(g, p, Kind());
     }
     template <class Config, class Base, class Property>
@@ -1727,7 +1688,7 @@ namespace boost {
     typename boost::property_map<typename Config::graph_type,
       Property>::const_type
     get(Property p, const adj_list_helper<Config, Base>& g) {
-      typedef typename property_kind<Property>::type Kind;
+      typedef typename detail::property_kind_from_graph<adj_list_helper<Config, Base>, Property>::type Kind;
       return detail::get_dispatch(g, p, Kind());
     }
 
@@ -1873,7 +1834,7 @@ namespace boost {
         // Copy the stored vertex objects by adding each vertex
         // and copying its property object.
         vertex_iterator vi, vi_end;
-        for (tie(vi, vi_end) = vertices(x); vi != vi_end; ++vi) {
+        for (boost::tie(vi, vi_end) = vertices(x); vi != vi_end; ++vi) {
           stored_vertex* v = (stored_vertex*)add_vertex(*this);
           v->m_property = ((stored_vertex*)*vi)->m_property;
           vertex_map[(stored_vertex*)*vi] = v;
@@ -1881,12 +1842,12 @@ namespace boost {
         // Copy the edges by adding each edge and copying its
         // property object.
         edge_iterator ei, ei_end;
-        for (tie(ei, ei_end) = edges(x); ei != ei_end; ++ei) {
+        for (boost::tie(ei, ei_end) = edges(x); ei != ei_end; ++ei) {
           edge_descriptor e;
           bool inserted;
           vertex_descriptor s = source(*ei,x), t = target(*ei,x);
-          tie(e, inserted) = add_edge(vertex_map[(stored_vertex*)s],
-                                      vertex_map[(stored_vertex*)t], *this);
+          boost::tie(e, inserted) = add_edge(vertex_map[(stored_vertex*)s],
+                                             vertex_map[(stored_vertex*)t], *this);
           *((edge_property_type*)e.m_eproperty)
             = *((edge_property_type*)(*ei).m_eproperty);
         }
@@ -2154,10 +2115,10 @@ namespace boost {
         // Copy the edges by adding each edge and copying its
         // property object.
         edge_iterator ei, ei_end;
-        for (tie(ei, ei_end) = edges(x); ei != ei_end; ++ei) {
+        for (boost::tie(ei, ei_end) = edges(x); ei != ei_end; ++ei) {
           edge_descriptor e;
           bool inserted;
-          tie(e, inserted) = add_edge(source(*ei,x), target(*ei,x) , *this);
+          boost::tie(e, inserted) = add_edge(source(*ei,x), target(*ei,x) , *this);
           *((edge_property_type*)e.m_eproperty)
             = *((edge_property_type*)(*ei).m_eproperty);
         }
@@ -2455,15 +2416,15 @@ namespace boost {
       typedef Reference reference;
       typedef typename Graph::vertex_descriptor key_type;
       typedef boost::lvalue_property_map_tag category;
-      inline adj_list_vertex_property_map() { }
-      inline adj_list_vertex_property_map(const Graph*) { }
+      inline adj_list_vertex_property_map(const Graph* = 0, Tag tag = Tag()): m_tag(tag) { }
       inline Reference operator[](key_type v) const {
         StoredVertex* sv = (StoredVertex*)v;
-        return get_property_value(sv->m_property, Tag());
+        return get_property_value(sv->m_property, m_tag);
       }
       inline Reference operator()(key_type v) const {
         return this->operator[](v);
       }
+      Tag m_tag;
     };
 
     template <class Graph, class Property, class PropRef>
@@ -2477,8 +2438,7 @@ namespace boost {
       typedef PropRef reference;
       typedef typename Graph::vertex_descriptor key_type;
       typedef boost::lvalue_property_map_tag category;
-      inline adj_list_vertex_all_properties_map() { }
-      inline adj_list_vertex_all_properties_map(const Graph*) { }
+      inline adj_list_vertex_all_properties_map(const Graph* = 0, vertex_all_t = vertex_all_t()) { }
       inline PropRef operator[](key_type v) const {
         StoredVertex* sv = (StoredVertex*)v;
         return sv->m_property;
@@ -2501,15 +2461,15 @@ namespace boost {
       typedef Reference reference;
       typedef typename boost::graph_traits<Graph>::vertex_descriptor key_type;
       typedef boost::lvalue_property_map_tag category;
-      vec_adj_list_vertex_property_map() { }
-      vec_adj_list_vertex_property_map(GraphPtr g) : m_g(g) { }
+      vec_adj_list_vertex_property_map(GraphPtr g = 0, Tag tag = Tag()) : m_g(g), m_tag(tag) { }
       inline Reference operator[](key_type v) const {
-        return get_property_value(m_g->m_vertices[v].m_property,  Tag());
+        return get_property_value(m_g->m_vertices[v].m_property, m_tag);
       }
       inline Reference operator()(key_type v) const {
         return this->operator[](v);
       }
       GraphPtr m_g;
+      Tag m_tag;
     };
 
     template <class Graph, class GraphPtr, class Property, class PropertyRef>
@@ -2523,8 +2483,7 @@ namespace boost {
       typedef PropertyRef reference;
       typedef typename boost::graph_traits<Graph>::vertex_descriptor key_type;
       typedef boost::lvalue_property_map_tag category;
-      vec_adj_list_vertex_all_properties_map() { }
-      vec_adj_list_vertex_all_properties_map(GraphPtr g) : m_g(g) { }
+      vec_adj_list_vertex_all_properties_map(GraphPtr g = 0, vertex_all_t = vertex_all_t()) : m_g(g) { }
       inline PropertyRef operator[](key_type v) const {
         return m_g->m_vertices[v].m_property;
       }
@@ -2570,7 +2529,7 @@ namespace boost {
       typedef boost::readable_property_map_tag category;
       inline vec_adj_list_vertex_id_map() { }
       template <class Graph>
-      inline vec_adj_list_vertex_id_map(const Graph&) { }
+      inline vec_adj_list_vertex_id_map(const Graph&, vertex_index_t) { }
       inline value_type operator[](key_type v) const { return v; }
       inline value_type operator()(key_type v) const { return v; }
     };
@@ -2607,21 +2566,14 @@ namespace boost {
       };
     };
   namespace detail {
-    template <class Tag>
-    struct adj_list_choose_vertex_pa_helper {
-      typedef adj_list_any_vertex_pa type;
-    };
-    template <>
-    struct adj_list_choose_vertex_pa_helper<vertex_all_t> {
-      typedef adj_list_all_vertex_pa type;
-    };
     template <class Tag, class Graph, class Property>
-    struct adj_list_choose_vertex_pa {
-      typedef typename adj_list_choose_vertex_pa_helper<Tag>::type Helper;
-      typedef typename Helper::template bind_<Tag,Graph,Property> Bind;
-      typedef typename Bind::type type;
-      typedef typename Bind::const_type const_type;
-    };
+    struct adj_list_choose_vertex_pa
+      : boost::mpl::if_<
+          boost::is_same<Tag, vertex_all_t>,
+          adj_list_all_vertex_pa,
+          adj_list_any_vertex_pa>::type
+        ::template bind_<Tag, Graph, Property>
+    {};
 
 
     template <class Tag>
@@ -2637,12 +2589,9 @@ namespace boost {
       typedef vec_adj_list_all_vertex_pa type;
     };
     template <class Tag, class Graph, class Property>
-    struct vec_adj_list_choose_vertex_pa {
-      typedef typename vec_adj_list_choose_vertex_pa_helper<Tag>::type Helper;
-      typedef typename Helper::template bind_<Tag,Graph,Property> Bind;
-      typedef typename Bind::type type;
-      typedef typename Bind::const_type const_type;
-    };
+    struct vec_adj_list_choose_vertex_pa
+      : vec_adj_list_choose_vertex_pa_helper<Tag>::type::template bind_<Tag,Graph,Property>
+    {};
   } // namespace detail
 
     //=========================================================================
@@ -2657,13 +2606,16 @@ namespace boost {
             Tag>
         >
     {
+      Tag tag;
+      explicit adj_list_edge_property_map(Tag tag = Tag()): tag(tag) {}
+
       typedef Value value_type;
       typedef Ref reference;
       typedef detail::edge_desc_impl<Directed, Vertex> key_type;
       typedef boost::lvalue_property_map_tag category;
       inline Ref operator[](key_type e) const {
         Property& p = *(Property*)e.get_property();
-        return get_property_value(p, Tag());
+        return get_property_value(p, tag);
       }
       inline Ref operator()(key_type e) const {
         return this->operator[](e);
@@ -2678,6 +2630,7 @@ namespace boost {
             PropPtr, Vertex>
         >
     {
+      explicit adj_list_edge_all_properties_map(edge_all_t = edge_all_t()) {}
       typedef Property value_type;
       typedef PropRef reference;
       typedef detail::edge_desc_impl<Directed, Vertex> key_type;
@@ -2729,19 +2682,12 @@ namespace boost {
       typedef adj_list_all_edge_pmap type;
     };
     template <class Tag, class Graph, class Property>
-    struct adj_list_choose_edge_pmap {
-      typedef typename adj_list_choose_edge_pmap_helper<Tag>::type Helper;
-      typedef typename Helper::template bind_<Graph,Property,Tag> Bind;
-      typedef typename Bind::type type;
-      typedef typename Bind::const_type const_type;
-    };
+    struct adj_list_choose_edge_pmap
+      : adj_list_choose_edge_pmap_helper<Tag>::type::template bind_<Graph, Property, Tag>
+      {};
     struct adj_list_edge_property_selector {
       template <class Graph, class Property, class Tag>
-      struct bind_ {
-        typedef adj_list_choose_edge_pmap<Tag,Graph,Property> Choice;
-        typedef typename Choice::type type;
-        typedef typename Choice::const_type const_type;
-      };
+      struct bind_: adj_list_choose_edge_pmap<Tag, Graph, Property> {};
     };
   } // namespace detail
 
@@ -2758,11 +2704,9 @@ namespace boost {
 
   struct adj_list_vertex_property_selector {
     template <class Graph, class Property, class Tag>
-    struct bind_ {
-      typedef detail::adj_list_choose_vertex_pa<Tag,Graph,Property> Choice;
-      typedef typename Choice::type type;
-      typedef typename Choice::const_type const_type;
-    };
+    struct bind_
+      : detail::adj_list_choose_vertex_pa<Tag,Graph,Property>
+    {};
   };
   template <>
   struct vertex_property_selector<adj_list_tag> {
@@ -2771,11 +2715,7 @@ namespace boost {
 
   struct vec_adj_list_vertex_property_selector {
     template <class Graph, class Property, class Tag>
-    struct bind_ {
-      typedef detail::vec_adj_list_choose_vertex_pa<Tag,Graph,Property> Choice;
-      typedef typename Choice::type type;
-      typedef typename Choice::const_type const_type;
-    };
+    struct bind_: detail::vec_adj_list_choose_vertex_pa<Tag,Graph,Property> {};
   };
   template <>
   struct vertex_property_selector<vec_adj_list_tag> {
@@ -2786,17 +2726,6 @@ namespace boost {
 
 #if !defined(BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
 namespace boost {
-
-  #if BOOST_WORKAROUND( _STLPORT_VERSION, >= 0x500 )
-  // STLport 5 already defines a hash<void*> specialization.
-  #else
-  template <>
-  struct hash< void* > // Need this when vertex_descriptor=void*
-  {
-    std::size_t
-    operator()(void* v) const { return (std::size_t)v; }
-  };
-  #endif
 
   template <typename V>
   struct hash< boost::detail::stored_edge<V> >
@@ -2831,15 +2760,6 @@ namespace boost {
 }
 #endif
 
-
-#undef stored_edge
-#undef stored_edge_property
-#undef stored_edge_iter
-
-#if BOOST_WORKAROUND(BOOST_MSVC, < 1300)
-// Stay out of the way of the concept checking class
-#undef Graph
-#endif
 
 #endif // BOOST_GRAPH_DETAIL_DETAIL_ADJACENCY_LIST_CCT
 

@@ -1,4 +1,4 @@
-//  Copyright (c) 2001-2010 Hartmut Kaiser
+//  Copyright (c) 2001-2011 Hartmut Kaiser
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,7 +16,7 @@
 #include <boost/spirit/home/support/unused.hpp>
 #include <boost/spirit/home/support/info.hpp>
 #include <boost/spirit/home/support/common_terminals.hpp>
-#include <boost/spirit/home/support/attributes.hpp>
+#include <boost/spirit/home/qi/detail/attributes.hpp>
 #include <boost/spirit/home/support/auxiliary/attr_cast.hpp>
 
 namespace boost { namespace spirit
@@ -87,7 +87,8 @@ namespace boost { namespace spirit { namespace qi
             // do down-stream transformation, provides attribute for embedded
             // parser
             typedef traits::transform_attribute<
-                exposed_attribute_type, transformed_attribute_type> transform;
+                exposed_attribute_type, transformed_attribute_type, domain> 
+            transform;
 
             typename transform::type attr_ = transform::pre(attr);
 

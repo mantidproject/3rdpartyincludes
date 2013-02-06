@@ -25,7 +25,14 @@
 #include <boost/property_map/dynamic_property_map.hpp>
 #include <boost/graph/overloading.hpp>
 #include <boost/graph/dll_import_export.hpp>
+#include <boost/graph/compressed_sparse_row_graph.hpp>
+#include <boost/graph/iteration_macros.hpp>
 #include <boost/spirit/include/classic_multi_pass.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/static_assert.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/xpressive/xpressive_static.hpp>
+#include <boost/foreach.hpp>
 
 namespace boost {
 
@@ -56,13 +63,26 @@ namespace boost {
     }
   };
 
+  template <typename T>
+  inline std::string escape_dot_string(const T& obj) {
+    using namespace boost::xpressive;
+    static sregex valid_unquoted_id = (((alpha | '_') >> *_w) | (!as_xpr('-') >> (('.' >> *_d) | (+_d >> !('.' >> *_d)))));
+    std::string s(boost::lexical_cast<std::string>(obj));
+    if (regex_match(s, valid_unquoted_id)) {
+      return s;
+    } else {
+      boost::algorithm::replace_all(s, "\"", "\\\"");
+      return "\"" + s + "\"";
+    }
+  }
+
   template <class Name>
   class label_writer {
   public:
     label_writer(Name _name) : name(_name) {}
     template <class VertexOrEdge>
     void operator()(std::ostream& out, const VertexOrEdge& v) const {
-      out << "[label=\"" << get(name, v) << "\"]";
+      out << "[label=" << escape_dot_string(get(name, v)) << "]";
     }
   private:
     Name name;
@@ -93,7 +113,7 @@ namespace boost {
     iend = attr.end();
 
     while ( i != iend ) {
-      out << i->first << "=\"" << i->second << "\"";
+      out << i->first << "=" << escape_dot_string(i->second);
       ++i;
       if ( i != iend )
         out << ", ";
@@ -239,20 +259,20 @@ namespace boost {
     typedef typename graph_traits<Graph>::directed_category cat_type;
     typedef graphviz_io_traits<cat_type> Traits;
     std::string name = "G";
-    out << Traits::name() << " " << name << " {" << std::endl;
+    out << Traits::name() << " " << escape_dot_string(name) << " {" << std::endl;
 
     gpw(out); //print graph properties
 
     typename graph_traits<Graph>::vertex_iterator i, end;
 
-    for(tie(i,end) = vertices(g); i != end; ++i) {
-      out << get(vertex_id, *i);
+    for(boost::tie(i,end) = vertices(g); i != end; ++i) {
+      out << escape_dot_string(get(vertex_id, *i));
       vpw(out, *i); //print vertex attributes
       out << ";" << std::endl;
     }
     typename graph_traits<Graph>::edge_iterator ei, edge_end;
-    for(tie(ei, edge_end) = edges(g); ei != edge_end; ++ei) {
-      out << get(vertex_id, source(*ei, g)) << Traits::delimiter() << get(vertex_id, target(*ei, g)) << " ";
+    for(boost::tie(ei, edge_end) = edges(g); ei != edge_end; ++ei) {
+      out << escape_dot_string(get(vertex_id, source(*ei, g))) << Traits::delimiter() << escape_dot_string(get(vertex_id, target(*ei, g))) << " ";
       epw(out, *ei); //print edge attributes
       out << ";" << std::endl;
     }
@@ -324,7 +344,7 @@ namespace boost {
       else
         out << "subgraph";
 
-      out << " " << g_name << " {" << std::endl;
+      out << " " << escape_dot_string(g_name) << " {" << std::endl;
 
       typename Graph::const_children_iterator i_child, j_child;
 
@@ -346,7 +366,7 @@ namespace boost {
 #endif
 
       //print subgraph
-      for ( tie(i_child,j_child) = g.children();
+      for ( boost::tie(i_child,j_child) = g.children();
             i_child != j_child; ++i_child )
         write_graphviz_subgraph(out, *i_child, vertex_marker, edge_marker,
                                 vertex_id);
@@ -356,12 +376,12 @@ namespace boost {
       typename graph_traits<Graph>::vertex_iterator i, end;
       typename graph_traits<Graph>::edge_iterator ei, edge_end;
 
-      for(tie(i,end) = vertices(g); i != end; ++i) {
+      for(boost::tie(i,end) = vertices(g); i != end; ++i) {
         Vertex v = g.local_to_global(*i);
         int pos = get(vertex_id, v);
         if ( vertex_marker[pos] ) {
           vertex_marker[pos] = false;
-          out << pos;
+          out << escape_dot_string(pos);
 #if defined(BOOST_MSVC) && BOOST_MSVC <= 1300
           typedef typename property_map<Graph, vertex_attribute_t>::const_type
             VertexAttributeMap;
@@ -375,14 +395,14 @@ namespace boost {
         }
       }
 
-      for (tie(ei, edge_end) = edges(g); ei != edge_end; ++ei) {
+      for (boost::tie(ei, edge_end) = edges(g); ei != edge_end; ++ei) {
         Vertex u = g.local_to_global(source(*ei,g)),
           v = g.local_to_global(target(*ei, g));
         int pos = get(get(edge_index, g.root()), g.local_to_global(*ei));
         if ( edge_marker[pos] ) {
           edge_marker[pos] = false;
-          out << get(vertex_id, u) << " " << Traits::delimiter()
-              << " " << get(vertex_id, v);
+          out << escape_dot_string(get(vertex_id, u)) << " " << Traits::delimiter()
+              << " " << escape_dot_string(get(vertex_id, v));
 #if defined(BOOST_MSVC) && BOOST_MSVC <= 1300
           typedef typename property_map<Graph, edge_attribute_t>::const_type
             EdgeAttributeMap;
@@ -449,6 +469,8 @@ namespace boost {
                                     vertex_id);
   }
 
+#if 0
+  // This interface has not worked for a long time
   typedef std::map<std::string, std::string> GraphvizAttrList;
 
   typedef property<vertex_attribute_t, GraphvizAttrList>
@@ -478,15 +500,15 @@ namespace boost {
                    GraphvizGraphProperty> >
           GraphvizGraph;
 
-
   // These four require linking the BGL-Graphviz library: libbgl-viz.a
   // from the /src directory.
   // Library has not existed for a while
-  // extern void read_graphviz(const std::string& file, GraphvizDigraph& g);
-  // extern void read_graphviz(FILE* file, GraphvizDigraph& g);
-  //
-  // extern void read_graphviz(const std::string& file, GraphvizGraph& g);
-  // extern void read_graphviz(FILE* file, GraphvizGraph& g);
+  extern void read_graphviz(const std::string& file, GraphvizDigraph& g);
+  extern void read_graphviz(FILE* file, GraphvizDigraph& g);
+  
+  extern void read_graphviz(const std::string& file, GraphvizGraph& g);
+  extern void read_graphviz(FILE* file, GraphvizGraph& g);
+#endif
 
   class dynamic_properties_writer
   {
@@ -504,7 +526,7 @@ namespace boost {
           else out << ", ";
           first = false;
 
-          out << i->first << "=\"" << i->second->get_string(key) << "\"";
+          out << i->first << "=" << escape_dot_string(i->second->get_string(key));
         }
       }
 
@@ -534,7 +556,7 @@ namespace boost {
           else out << ", ";
           first = false;
 
-          out << i->first << "=\"" << i->second->get_string(key) << "\"";
+          out << i->first << "=" << escape_dot_string(i->second->get_string(key));
         }
       }
 
@@ -576,22 +598,22 @@ namespace boost {
 
   template<typename Graph>
   inline void
-  write_graphviz(std::ostream& out, const Graph& g,
-                 const dynamic_properties& dp,
-                 const std::string& node_id = "node_id"
-                 BOOST_GRAPH_ENABLE_IF_MODELS_PARM(Graph,vertex_list_graph_tag))
+  write_graphviz_dp(std::ostream& out, const Graph& g,
+                    const dynamic_properties& dp,
+                    const std::string& node_id = "node_id"
+                    BOOST_GRAPH_ENABLE_IF_MODELS_PARM(Graph,vertex_list_graph_tag))
   {
     typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
-    write_graphviz(out, g, dp, node_id,
-                   graph::detail::node_id_property_map<Vertex>(dp, node_id));
+    write_graphviz_dp(out, g, dp, node_id,
+                      graph::detail::node_id_property_map<Vertex>(dp, node_id));
   }
 
   template<typename Graph, typename VertexID>
   void
-  write_graphviz(std::ostream& out, const Graph& g,
-                 const dynamic_properties& dp, const std::string& node_id,
-                 VertexID id
-                 BOOST_GRAPH_ENABLE_IF_MODELS_PARM(Graph,vertex_list_graph_tag))
+  write_graphviz_dp(std::ostream& out, const Graph& g,
+                    const dynamic_properties& dp, const std::string& node_id,
+                    VertexID id
+                    BOOST_GRAPH_ENABLE_IF_MODELS_PARM(Graph,vertex_list_graph_tag))
   {
     write_graphviz
       (out, g,
@@ -695,6 +717,9 @@ class mutate_graph
 
   virtual void  // RG: need new second parameter to support BGL subgraphs
   set_graph_property(const id_t& key, const id_t& value) = 0;
+
+  virtual void
+  finish_building_graph() = 0;
 };
 
 template<typename MutableGraph>
@@ -763,11 +788,116 @@ class mutate_graph_impl : public mutate_graph
     put(key, dp_, &graph_, value);
   }
 
+  void finish_building_graph() {}
+
 
  protected:
   MutableGraph& graph_;
   dynamic_properties& dp_;
   std::string node_id_prop_;
+  std::map<node_t, bgl_vertex_t> bgl_nodes;
+  std::map<edge_t, bgl_edge_t> bgl_edges;
+};
+
+template<typename Directed,
+         typename VertexProperty,
+         typename EdgeProperty,
+         typename GraphProperty,
+         typename Vertex,
+         typename EdgeIndex>
+class mutate_graph_impl<compressed_sparse_row_graph<Directed, VertexProperty, EdgeProperty, GraphProperty, Vertex, EdgeIndex> >
+  : public mutate_graph
+{
+  typedef compressed_sparse_row_graph<Directed, VertexProperty, EdgeProperty, GraphProperty, Vertex, EdgeIndex> CSRGraph;
+  typedef typename graph_traits<CSRGraph>::vertices_size_type bgl_vertex_t;
+  typedef typename graph_traits<CSRGraph>::edges_size_type    bgl_edge_t;
+  typedef typename graph_traits<CSRGraph>::edge_descriptor    edge_descriptor;
+
+ public:
+  mutate_graph_impl(CSRGraph& graph, dynamic_properties& dp,
+                    std::string node_id_prop)
+    : graph_(graph), dp_(dp), vertex_count(0), node_id_prop_(node_id_prop) { }
+
+  ~mutate_graph_impl() {}
+
+  void finish_building_graph() {
+    typedef compressed_sparse_row_graph<directedS, no_property, bgl_edge_t, GraphProperty, Vertex, EdgeIndex> TempCSRGraph;
+    TempCSRGraph temp(edges_are_unsorted_multi_pass,
+                      edges_to_add.begin(), edges_to_add.end(),
+                      counting_iterator<bgl_edge_t>(0),
+                      vertex_count);
+    set_property(temp, graph_all, get_property(graph_, graph_all));
+    graph_.assign(temp); // Copies structure, not properties
+    std::vector<edge_descriptor> edge_permutation_from_sorting(num_edges(temp));
+    BGL_FORALL_EDGES_T(e, temp, TempCSRGraph) {
+      edge_permutation_from_sorting[temp[e]] = e;
+    }
+    typedef boost::tuple<id_t, bgl_vertex_t, id_t> v_prop;
+    BOOST_FOREACH(const v_prop& t, vertex_props) {
+      put(boost::get<0>(t), dp_, boost::get<1>(t), boost::get<2>(t));
+    }
+    typedef boost::tuple<id_t, bgl_edge_t, id_t> e_prop;
+    BOOST_FOREACH(const e_prop& t, edge_props) {
+      put(boost::get<0>(t), dp_, edge_permutation_from_sorting[boost::get<1>(t)], boost::get<2>(t));
+    }
+  }
+
+  bool is_directed() const
+  {
+    return
+      boost::is_convertible<
+        typename boost::graph_traits<CSRGraph>::directed_category,
+        boost::directed_tag>::value;
+  }
+
+  virtual void do_add_vertex(const node_t& node)
+  {
+    // Add the node to the graph.
+    bgl_vertex_t v = vertex_count++;
+
+    // Set up a mapping from name to BGL vertex.
+    bgl_nodes.insert(std::make_pair(node, v));
+
+    // node_id_prop_ allows the caller to see the real id names for nodes.
+    vertex_props.push_back(boost::make_tuple(node_id_prop_, v, node));
+  }
+
+  void
+  do_add_edge(const edge_t& edge, const node_t& source, const node_t& target)
+  {
+    bgl_edge_t result = edges_to_add.size();
+    edges_to_add.push_back(std::make_pair(bgl_nodes[source], bgl_nodes[target]));
+    bgl_edges.insert(std::make_pair(edge, result));
+  }
+
+  void
+  set_node_property(const id_t& key, const node_t& node, const id_t& value)
+  {
+    vertex_props.push_back(boost::make_tuple(key, bgl_nodes[node], value));
+  }
+
+  void
+  set_edge_property(const id_t& key, const edge_t& edge, const id_t& value)
+  {
+    edge_props.push_back(boost::make_tuple(key, bgl_edges[edge], value));
+  }
+
+  void
+  set_graph_property(const id_t& key, const id_t& value)
+  {
+    /* RG: pointer to graph prevents copying */
+    put(key, dp_, &graph_, value);
+  }
+
+
+ protected:
+  CSRGraph& graph_;
+  dynamic_properties& dp_;
+  bgl_vertex_t vertex_count;
+  std::string node_id_prop_;
+  std::vector<boost::tuple<id_t, bgl_vertex_t, id_t> > vertex_props;
+  std::vector<boost::tuple<id_t, bgl_edge_t, id_t> > edge_props;
+  std::vector<std::pair<bgl_vertex_t, bgl_vertex_t> > edges_to_add;
   std::map<node_t, bgl_vertex_t> bgl_nodes;
   std::map<edge_t, bgl_edge_t> bgl_edges;
 };

@@ -1,8 +1,8 @@
 //
-// basic_resolver_iterator.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ip/basic_resolver_iterator.hpp
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2010 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2012 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -15,19 +15,18 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
-#include <boost/asio/detail/push_options.hpp>
-
-#include <boost/asio/detail/push_options.hpp>
-#include <boost/iterator.hpp>
-#include <boost/shared_ptr.hpp>
+#include <boost/asio/detail/config.hpp>
+#include <cstddef>
 #include <cstring>
+#include <iterator>
 #include <string>
 #include <vector>
-#include <boost/asio/detail/pop_options.hpp>
-
+#include <boost/asio/detail/shared_ptr.hpp>
 #include <boost/asio/detail/socket_ops.hpp>
 #include <boost/asio/detail/socket_types.hpp>
 #include <boost/asio/ip/basic_resolver_entry.hpp>
+
+#include <boost/asio/detail/push_options.hpp>
 
 namespace boost {
 namespace asio {
@@ -47,15 +46,23 @@ namespace ip {
  */
 template <typename InternetProtocol>
 class basic_resolver_iterator
-#if defined(GENERATING_DOCUMENTATION)
-  : public std::iterator<
-#else // defined(GENERATING_DOCUMENTATION)
-  : public boost::iterator<
-#endif // defined(GENERATING_DOCUMENTATION)
-      std::forward_iterator_tag,
-      const basic_resolver_entry<InternetProtocol> >
 {
 public:
+  /// The type used for the distance between two iterators.
+  typedef std::ptrdiff_t difference_type;
+
+  /// The type of the value pointed to by the iterator.
+  typedef basic_resolver_entry<InternetProtocol> value_type;
+
+  /// The type of the result of applying operator->() to the iterator.
+  typedef const basic_resolver_entry<InternetProtocol>* pointer;
+
+  /// The type of the result of applying operator*() to the iterator.
+  typedef const basic_resolver_entry<InternetProtocol>& reference;
+
+  /// The iterator category.
+  typedef std::forward_iterator_tag iterator_category;
+
   /// Default constructor creates an end iterator.
   basic_resolver_iterator()
     : index_(0)
@@ -177,7 +184,7 @@ private:
   }
 
   typedef std::vector<basic_resolver_entry<InternetProtocol> > values_type;
-  boost::shared_ptr<values_type> values_;
+  boost::asio::detail::shared_ptr<values_type> values_;
   std::size_t index_;
 };
 

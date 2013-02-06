@@ -1,5 +1,5 @@
 /*=============================================================================
-    Copyright (c) 2001-2010 Joel de Guzman
+    Copyright (c) 2001-2011 Joel de Guzman
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -12,11 +12,11 @@
 #endif
 
 #include <boost/assert.hpp>
+#include <boost/config.hpp>
 #include <boost/function.hpp>
 #include <boost/mpl/vector.hpp>
 #include <boost/type_traits/add_reference.hpp>
 #include <boost/type_traits/is_same.hpp>
-#include <boost/utility/enable_if.hpp>
 
 #include <boost/fusion/include/vector.hpp>
 #include <boost/fusion/include/size.hpp>
@@ -29,12 +29,13 @@
 #include <boost/spirit/home/support/argument.hpp>
 #include <boost/spirit/home/support/context.hpp>
 #include <boost/spirit/home/support/info.hpp>
-#include <boost/spirit/home/support/attributes.hpp>
+#include <boost/spirit/home/qi/detail/attributes.hpp>
 #include <boost/spirit/home/support/nonterminal/extract_param.hpp>
 #include <boost/spirit/home/support/nonterminal/locals.hpp>
 #include <boost/spirit/home/qi/reference.hpp>
 #include <boost/spirit/home/qi/nonterminal/detail/parameterized.hpp>
 #include <boost/spirit/home/qi/nonterminal/detail/parser_binder.hpp>
+#include <boost/spirit/home/qi/nonterminal/nonterminal_fwd.hpp>
 #include <boost/spirit/home/qi/skip_over.hpp>
 
 #if defined(BOOST_MSVC)
@@ -45,6 +46,21 @@
 namespace boost { namespace spirit { namespace qi
 {
     BOOST_PP_REPEAT(SPIRIT_ATTRIBUTES_LIMIT, SPIRIT_USING_ATTRIBUTE, _)
+
+    using spirit::_pass_type;
+    using spirit::_val_type;
+    using spirit::_a_type;
+    using spirit::_b_type;
+    using spirit::_c_type;
+    using spirit::_d_type;
+    using spirit::_e_type;
+    using spirit::_f_type;
+    using spirit::_g_type;
+    using spirit::_h_type;
+    using spirit::_i_type;
+    using spirit::_j_type;
+
+#ifndef BOOST_SPIRIT_NO_PREDEFINED_TERMINALS
 
     using spirit::_pass;
     using spirit::_val;
@@ -59,16 +75,14 @@ namespace boost { namespace spirit { namespace qi
     using spirit::_i;
     using spirit::_j;
 
+#endif
+
     using spirit::info;
     using spirit::locals;
 
     template <
-        typename Iterator
-      , typename T1 = unused_type
-      , typename T2 = unused_type
-      , typename T3 = unused_type
-      , typename T4 = unused_type
-    >
+        typename Iterator, typename T1, typename T2, typename T3
+      , typename T4>
     struct rule
       : proto::extends<
             typename proto::terminal<
@@ -153,18 +167,28 @@ namespace boost { namespace spirit { namespace qi
         {
         }
 
-        template <typename Expr>
-        rule(Expr const& expr, std::string const& name_ = "unnamed-rule")
-          : base_type(terminal::make(reference_(*this)))
-          , name_(name_)
+        template <typename Auto, typename Expr>
+        static void define(rule& lhs, Expr const& expr, mpl::false_)
         {
             // Report invalid expression error as early as possible.
             // If you got an error_invalid_expression error message here,
             // then the expression (expr) is not a valid spirit qi expression.
             BOOST_SPIRIT_ASSERT_MATCH(qi::domain, Expr);
+        }
 
-            f = detail::bind_parser<mpl::false_>(
+        template <typename Auto, typename Expr>
+        static void define(rule& lhs, Expr const& expr, mpl::true_)
+        {
+            lhs.f = detail::bind_parser<Auto>(
                 compile<qi::domain>(expr, encoding_modifier_type()));
+        }
+
+        template <typename Expr>
+        rule(Expr const& expr, std::string const& name_ = "unnamed-rule")
+          : base_type(terminal::make(reference_(*this)))
+          , name_(name_)
+        {
+            define<mpl::false_>(*this, expr, traits::matches<qi::domain, Expr>());
         }
 
         rule& operator=(rule const& rhs)
@@ -173,7 +197,7 @@ namespace boost { namespace spirit { namespace qi
             // from an uninitialized one. Did you mean to refer to the right
             // hand side rule instead of assigning from it? In this case you
             // should write lhs = rhs.alias();
-            BOOST_ASSERT(rhs.f);
+            BOOST_ASSERT(rhs.f && "Did you mean rhs.alias() instead of rhs?");
 
             f = rhs.f;
             name_ = rhs.name_;
@@ -193,36 +217,51 @@ namespace boost { namespace spirit { namespace qi
         template <typename Expr>
         rule& operator=(Expr const& expr)
         {
-            // Report invalid expression error as early as possible.
-            // If you got an error_invalid_expression error message here,
-            // then the expression (expr) is not a valid spirit qi expression.
-            BOOST_SPIRIT_ASSERT_MATCH(qi::domain, Expr);
-
-            f = detail::bind_parser<mpl::false_>(
-                compile<qi::domain>(expr, encoding_modifier_type()));
+            define<mpl::false_>(*this, expr, traits::matches<qi::domain, Expr>());
             return *this;
         }
 
+// VC7.1 has problems to resolve 'rule' without explicit template parameters
+#if !BOOST_WORKAROUND(BOOST_MSVC, < 1400)
         // g++ 3.3 barfs if this is a member function :(
         template <typename Expr>
         friend rule& operator%=(rule& r, Expr const& expr)
         {
-            // Report invalid expression error as early as possible.
-            // If you got an error_invalid_expression error message here,
-            // then the expression (expr) is not a valid spirit qi expression.
-            BOOST_SPIRIT_ASSERT_MATCH(qi::domain, Expr);
-
-            r.f = detail::bind_parser<mpl::true_>(
-                compile<qi::domain>(expr, encoding_modifier_type()));
+            define<mpl::true_>(r, expr, traits::matches<qi::domain, Expr>());
             return r;
         }
 
+#if defined(BOOST_NO_RVALUE_REFERENCES)
         // non-const version needed to suppress proto's %= kicking in
         template <typename Expr>
         friend rule& operator%=(rule& r, Expr& expr)
         {
             return r %= static_cast<Expr const&>(expr);
         }
+#else
+        // for rvalue references
+        template <typename Expr>
+        friend rule& operator%=(rule& r, Expr&& expr)
+        {
+            define<mpl::true_>(r, expr, traits::matches<qi::domain, Expr>());
+            return r;
+        }
+#endif
+
+#else
+        // both friend functions have to be defined out of class as VC7.1
+        // will complain otherwise
+        template <typename OutputIterator_, typename T1_, typename T2_
+          , typename T3_, typename T4_, typename Expr>
+        friend rule<OutputIterator_, T1_, T2_, T3_, T4_>& operator%=(
+            rule<OutputIterator_, T1_, T2_, T3_, T4_>& r, Expr const& expr);
+
+        // non-const version needed to suppress proto's %= kicking in
+        template <typename OutputIterator_, typename T1_, typename T2_
+          , typename T3_, typename T4_, typename Expr>
+        friend rule<OutputIterator_, T1_, T2_, T3_, T4_>& operator%=(
+            rule<OutputIterator_, T1_, T2_, T3_, T4_>& r, Expr& expr);
+#endif
 
         template <typename Context, typename Iterator_>
         struct attribute
@@ -246,7 +285,8 @@ namespace boost { namespace spirit { namespace qi
                 // do down-stream transformation, provides attribute for
                 // rhs parser
                 typedef traits::transform_attribute<
-                    typename make_attribute::type, attr_type> transform;
+                    typename make_attribute::type, attr_type, domain>
+                transform;
 
                 typename make_attribute::type made_attr = make_attribute::call(attr);
                 typename transform::type attr_ = transform::pre(made_attr);
@@ -257,7 +297,7 @@ namespace boost { namespace spirit { namespace qi
                 context_type context(attr_);
 
                 // If you are seeing a compilation error here stating that the
-                // forth parameter can't be converted to a required target type
+                // fourth parameter can't be converted to a required target type
                 // then you are probably trying to use a rule or a grammar with
                 // an incompatible skipper type.
                 if (f(first, last, context, skipper))
@@ -291,7 +331,8 @@ namespace boost { namespace spirit { namespace qi
                 // do down-stream transformation, provides attribute for
                 // rhs parser
                 typedef traits::transform_attribute<
-                    typename make_attribute::type, attr_type> transform;
+                    typename make_attribute::type, attr_type, domain>
+                transform;
 
                 typename make_attribute::type made_attr = make_attribute::call(attr);
                 typename transform::type attr_ = transform::pre(made_attr);
@@ -302,7 +343,7 @@ namespace boost { namespace spirit { namespace qi
                 context_type context(attr_, params, caller_context);
 
                 // If you are seeing a compilation error here stating that the
-                // forth parameter can't be converted to a required target type
+                // fourth parameter can't be converted to a required target type
                 // then you are probably trying to use a rule or a grammar with
                 // an incompatible skipper type.
                 if (f(first, last, context, skipper))
@@ -344,6 +385,51 @@ namespace boost { namespace spirit { namespace qi
         std::string name_;
         function_type f;
     };
+
+#if BOOST_WORKAROUND(BOOST_MSVC, < 1400)
+    template <typename OutputIterator_, typename T1_, typename T2_
+      , typename T3_, typename T4_, typename Expr>
+    rule<OutputIterator_, T1_, T2_, T3_, T4_>& operator%=(
+        rule<OutputIterator_, T1_, T2_, T3_, T4_>& r, Expr const& expr)
+    {
+        // Report invalid expression error as early as possible.
+        // If you got an error_invalid_expression error message here,
+        // then the expression (expr) is not a valid spirit qi expression.
+        BOOST_SPIRIT_ASSERT_MATCH(qi::domain, Expr);
+
+        typedef typename
+            rule<OutputIterator_, T1_, T2_, T3_, T4_>::encoding_modifier_type
+        encoding_modifier_type;
+
+        r.f = detail::bind_parser<mpl::true_>(
+            compile<qi::domain>(expr, encoding_modifier_type()));
+        return r;
+    }
+
+    template <typename Iterator_, typename T1_, typename T2_
+      , typename T3_, typename T4_, typename Expr>
+    rule<Iterator_, T1_, T2_, T3_, T4_>& operator%=(
+        rule<Iterator_, T1_, T2_, T3_, T4_>& r, Expr& expr)
+    {
+        return r %= static_cast<Expr const&>(expr);
+    }
+#endif
+}}}
+
+namespace boost { namespace spirit { namespace traits
+{
+    ///////////////////////////////////////////////////////////////////////////
+    template <
+        typename IteratorA, typename IteratorB, typename Attribute
+      , typename Context, typename T1, typename T2, typename T3, typename T4>
+    struct handles_container<
+        qi::rule<IteratorA, T1, T2, T3, T4>, Attribute, Context, IteratorB>
+      : traits::is_container<
+          typename attribute_of<
+              qi::rule<IteratorA, T1, T2, T3, T4>, Context, IteratorB
+          >::type
+        >
+    {};
 }}}
 
 #if defined(BOOST_MSVC)

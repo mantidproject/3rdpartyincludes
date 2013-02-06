@@ -262,8 +262,8 @@ write_graphml(std::ostream& out, const Graph& g, VertexIndexMap vertex_index,
     for (dynamic_properties::const_iterator i = dp.begin(); i != dp.end(); ++i)
     {
         std::string key_id = "key" + lexical_cast<std::string>(key_count++);
-        if (i->second->key() == typeid(Graph))
-            vertex_key_ids[i->first] = key_id;
+        if (i->second->key() == typeid(Graph*))
+            graph_key_ids[i->first] = key_id;
         else if (i->second->key() == typeid(vertex_descriptor))
             vertex_key_ids[i->first] = key_id;
         else if (i->second->key() == typeid(edge_descriptor))
@@ -273,7 +273,7 @@ write_graphml(std::ostream& out, const Graph& g, VertexIndexMap vertex_index,
         std::string type_name = "string";
         mpl::for_each<value_types>(get_type_name<value_types>(i->second->value(), type_names, type_name));
         out << "  <key id=\"" << encode_char_entities(key_id) << "\" for=\""
-            << (i->second->key() == typeid(Graph) ? "graph" : (i->second->key() == typeid(vertex_descriptor) ? "node" : "edge")) << "\""
+            << (i->second->key() == typeid(Graph*) ? "graph" : (i->second->key() == typeid(vertex_descriptor) ? "node" : "edge")) << "\""
             << " attr.name=\"" << i->first << "\""
             << " attr.type=\"" << type_name << "\""
             << " />\n";
@@ -287,16 +287,18 @@ write_graphml(std::ostream& out, const Graph& g, VertexIndexMap vertex_index,
     // Output graph data
     for (dynamic_properties::const_iterator i = dp.begin(); i != dp.end(); ++i)
     {
-        if (i->second->key() == typeid(Graph))
+        if (i->second->key() == typeid(Graph*))
         {
+            // The const_cast here is just to get typeid correct for property
+            // map key; the graph should not be mutated using it.
             out << "   <data key=\"" << graph_key_ids[i->first] << "\">"
-                << encode_char_entities(i->second->get_string(g)) << "</data>\n";
+                << encode_char_entities(i->second->get_string(const_cast<Graph*>(&g))) << "</data>\n";
         }
     }
 
     typedef typename graph_traits<Graph>::vertex_iterator vertex_iterator;
     vertex_iterator v, v_end;
-    for (tie(v, v_end) = vertices(g); v != v_end; ++v)
+    for (boost::tie(v, v_end) = vertices(g); v != v_end; ++v)
     {
         out << "    <node id=\"n" << get(vertex_index, *v) << "\">\n";
         // Output data
@@ -314,7 +316,7 @@ write_graphml(std::ostream& out, const Graph& g, VertexIndexMap vertex_index,
     typedef typename graph_traits<Graph>::edge_iterator edge_iterator;
     edge_iterator e, e_end;
     typename graph_traits<Graph>::edges_size_type edge_count = 0;
-    for (tie(e, e_end) = edges(g); e != e_end; ++e)
+    for (boost::tie(e, e_end) = edges(g); e != e_end; ++e)
     {
         out << "    <edge id=\"e" << edge_count++ << "\" source=\"n"
             << get(vertex_index, source(*e, g)) << "\" target=\"n"

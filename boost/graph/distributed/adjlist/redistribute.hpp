@@ -203,7 +203,7 @@ PBGL_DISTRIB_ADJLIST_TYPE
 
   // Build the sets of relocated vertices for each process and then do
   // an all-to-all transfer.
-  for (tie(vi, vi_end) = vertices(*this); vi != vi_end; ++vi) {
+  for (boost::tie(vi, vi_end) = vertices(*this); vi != vi_end; ++vi) {
     if (!has_stable_descriptors
         || get(vertex_to_processor, *vi) != vi->owner) {
       redistributed_vertices[get(vertex_to_processor, *vi)]
@@ -230,15 +230,15 @@ PBGL_DISTRIB_ADJLIST_TYPE
 
   // Build the sets of relocated edges for each process and then do
   // an all-to-all transfer.
-  for (tie(ei, ei_end) = edges(*this); ei != ei_end; ++ei) {
+  for (boost::tie(ei, ei_end) = edges(*this); ei != ei_end; ++ei) {
     vertex_descriptor src = source(*ei, *this);
     vertex_descriptor tgt = target(*ei, *this);
     if (!has_stable_descriptors
         || get(vertex_to_processor, src) != src.owner
         || get(vertex_to_processor, tgt) != tgt.owner)
       redistributed_edges[get(vertex_to_processor, source(*ei, *this))]
-        .push_back(redistributed_edge(*ei, get(edge_all_t(), base(),
-                                               ei->local)));
+        .push_back(redistributed_edge(*ei, split_edge_property(get(edge_all_t(), base(),
+                                                                   ei->local))));
   }
   inplace_all_to_all(pg, redistributed_edges);
 
@@ -273,7 +273,7 @@ PBGL_DISTRIB_ADJLIST_TYPE
                            source_or_target_migrated(vertex_to_processor, *this));
 
     // Eliminate vertices that have migrated
-    for (tie(vi, vi_end) = vertices(*this); vi != vi_end; /* in loop */) {
+    for (boost::tie(vi, vi_end) = vertices(*this); vi != vi_end; /* in loop */) {
       if (get(vertex_to_processor, *vi) != vi->owner)
         remove_vertex((*vi++).local, base());
       else {

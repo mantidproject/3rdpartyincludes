@@ -2,7 +2,7 @@
 // basic_streambuf.hpp
 // ~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2010 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2012 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -15,27 +15,22 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
-#include <boost/asio/detail/push_options.hpp>
-
-#include <boost/asio/detail/push_options.hpp>
-#include <boost/config.hpp>
-#include <boost/asio/detail/pop_options.hpp>
+#include <boost/asio/detail/config.hpp>
 
 #if !defined(BOOST_NO_IOSTREAM)
 
-#include <boost/asio/detail/push_options.hpp>
 #include <algorithm>
 #include <cstring>
-#include <memory>
 #include <stdexcept>
 #include <streambuf>
 #include <vector>
 #include <boost/limits.hpp>
 #include <boost/throw_exception.hpp>
-#include <boost/asio/detail/pop_options.hpp>
-
+#include <boost/asio/basic_streambuf_fwd.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/detail/noncopyable.hpp>
+
+#include <boost/asio/detail/push_options.hpp>
 
 namespace boost {
 namespace asio {
@@ -108,7 +103,11 @@ namespace asio {
  * is >> s;
  * @endcode
  */
+#if defined(GENERATING_DOCUMENTATION)
 template <typename Allocator = std::allocator<char> >
+#else
+template <typename Allocator>
+#endif
 class basic_streambuf
   : public std::streambuf,
     private noncopyable
@@ -131,9 +130,9 @@ public:
    * of the streambuf's input sequence is 0.
    */
   explicit basic_streambuf(
-      std::size_t max_size = (std::numeric_limits<std::size_t>::max)(),
+      std::size_t maximum_size = (std::numeric_limits<std::size_t>::max)(),
       const Allocator& allocator = Allocator())
-    : max_size_(max_size),
+    : max_size_(maximum_size),
       buffer_(allocator)
   {
     std::size_t pend = (std::min<std::size_t>)(max_size_, buffer_delta);
@@ -238,6 +237,8 @@ public:
    */
   void consume(std::size_t n)
   {
+    if (egptr() < pptr())
+      setg(&buffer_[0], gptr(), pptr());
     if (gptr() + n > pptr())
       n = pptr() - gptr();
     gbump(static_cast<int>(n));
@@ -338,7 +339,26 @@ protected:
 private:
   std::size_t max_size_;
   std::vector<char_type, Allocator> buffer_;
+
+  // Helper function to get the preferred size for reading data.
+  friend std::size_t read_size_helper(
+      basic_streambuf& sb, std::size_t max_size)
+  {
+    return std::min<std::size_t>(
+        std::max<std::size_t>(512, sb.buffer_.capacity() - sb.size()),
+        std::min<std::size_t>(max_size, sb.max_size() - sb.size()));
+  }
 };
+
+// Helper function to get the preferred size for reading data. Used for any
+// user-provided specialisations of basic_streambuf.
+template <typename Allocator>
+inline std::size_t read_size_helper(
+    basic_streambuf<Allocator>& sb, std::size_t max_size)
+{
+  return std::min<std::size_t>(512,
+      std::min<std::size_t>(max_size, sb.max_size() - sb.size()));
+}
 
 } // namespace asio
 } // namespace boost

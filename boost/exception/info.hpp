@@ -97,7 +97,7 @@ boost
                     {
                     shared_ptr<error_info_base> const & p = i->second;
 #ifndef BOOST_NO_RTTI
-                    BOOST_ASSERT( BOOST_EXCEPTION_DYNAMIC_TYPEID(*p).type_==ti.type_ );
+                    BOOST_ASSERT( *BOOST_EXCEPTION_DYNAMIC_TYPEID(*p).type_==*ti.type_ );
 #endif
                     return p;
                     }
@@ -109,13 +109,12 @@ boost
                 {
                 if( header )
                     {
-                    BOOST_ASSERT(*header!=0);
                     std::ostringstream tmp;
                     tmp << header;
                     for( error_info_map::const_iterator i=info_.begin(),end=info_.end(); i!=end; ++i )
                         {
-                        shared_ptr<error_info_base const> const & x = i->second;
-                        tmp << '[' << x->tag_typeid_name() << "] = " << x->value_as_string() << '\n';
+                        error_info_base const & x = *i->second;
+                        tmp << '[' << x.tag_typeid_name() << "] = " << x.value_as_string() << '\n';
                         }
                     tmp.str().swap(diagnostic_info_str_);
                     }
@@ -140,11 +139,16 @@ boost
                 ++count_;
                 }
 
-            void
+            bool
             release() const
                 {
-                if( !--count_ )
+                if( --count_ )
+                    return false;
+                else
+                    {
                     delete this;
+                    return true;
+                    }
                 }
 
             refcount_ptr<error_info_container>

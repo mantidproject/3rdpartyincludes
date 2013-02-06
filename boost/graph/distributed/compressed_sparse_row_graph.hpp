@@ -17,6 +17,7 @@
 #error "Parallel BGL files should not be included unless <boost/graph/use_mpi.hpp> has been included"
 #endif
 
+#include <boost/assert.hpp>
 #include <boost/graph/compressed_sparse_row_graph.hpp>
 #include <boost/graph/distributed/selector.hpp>
 #include <boost/mpl/if.hpp>
@@ -129,14 +130,20 @@ class compressed_sparse_row_graph<
 
   // -----------------------------------------------------------------
   // Workarounds
+  // NOTE: This graph type does not have old-style graph properties. It only
+  // accepts bundles.
   typedef no_property vertex_property_type;
   typedef no_property edge_property_type;
+  typedef no_property graph_property_type;
   typedef typename mpl::if_<is_void<VertexProperty>,
                             void****,
                             VertexProperty>::type vertex_bundled;
   typedef typename mpl::if_<is_void<EdgeProperty>,
                             void****,
                             EdgeProperty>::type edge_bundled;
+  typedef typename mpl::if_<is_void<GraphProperty>,
+                            void****,
+                            GraphProperty>::type graph_bundled;
 
   // -----------------------------------------------------------------
   // Useful types
@@ -358,30 +365,22 @@ class compressed_sparse_row_graph<
   // Directly access a vertex or edge bundle
   vertex_bundled& operator[](vertex_descriptor v)
   {
-    std::pair<process_id_type, vertex_descriptor> locator
-      = get(vertex_global, *this, v);
-    assert(locator.first == process_id(m_process_group));
-    return base().m_vertex_properties[locator.second];
+    return get(vertex_bundle, *this, v);
   }
 
   const vertex_bundled& operator[](vertex_descriptor v) const
   {
-    std::pair<process_id_type, vertex_descriptor> locator
-      = get(vertex_global, *this, v);
-    assert(locator.first == process_id(m_process_group));
-    return base().m_process_group[locator.second];
+    return get(vertex_bundle, *this, v);
   }
 
   edge_bundled& operator[](edge_descriptor e)
   {
-    assert(get(vertex_owner, *this, e.src) == process_id(m_process_group));
-    return base().m_edge_properties[e.idx];
+    return get(edge_bundle, *this, e);
   }
 
   const edge_bundled& operator[](edge_descriptor e) const
   {
-    assert(get(vertex_owner, *this, e.src) == process_id(m_process_group));
-    return base().m_edge_properties[e.idx];
+    return get(edge_bundle, *this, e);
   }
 
   // Create a vertex descriptor from a process ID and a local index.
@@ -1750,19 +1749,22 @@ class csr_edge_global_map
  public:
   // -----------------------------------------------------------------
   // Readable Property Map concept requirements
-  typedef std::pair<ProcessID, EdgeIndex> value_type;
-  typedef value_type reference;
   typedef detail::csr_edge_descriptor<Vertex, EdgeIndex> key_type;
+  typedef std::pair<ProcessID, detail::csr_edge_descriptor<Vertex, EdgeIndex> > value_type;
+  typedef value_type reference;
   typedef readable_property_map_tag category;
 };
 
 template<typename ProcessID, typename Vertex, typename EdgeIndex>
-inline std::pair<ProcessID, EdgeIndex>
+inline std::pair<ProcessID, detail::csr_edge_descriptor<Vertex, EdgeIndex> >
 get(csr_edge_global_map<ProcessID, Vertex, EdgeIndex> pm,
     typename csr_edge_global_map<ProcessID, Vertex, EdgeIndex>::key_type k)
 {
   const int local_index_bits = sizeof(Vertex) * CHAR_BIT - processor_bits;
-  return std::pair<ProcessID, EdgeIndex>(k.src >> local_index_bits, k.idx);
+  const Vertex local_index_mask = Vertex(-1) >> processor_bits;
+  return std::pair<ProcessID, detail::csr_edge_descriptor<Vertex, EdgeIndex> >
+           ((k.src >> local_index_bits),
+            detail::csr_edge_descriptor<Vertex, EdgeIndex>(k.src & local_index_mask, k.idx));
 }
 
 template<BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS>
@@ -1789,7 +1791,7 @@ get(edge_global_t, BOOST_DISTRIB_CSR_GRAPH_TYPE& g)
 template<BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS>
 inline
 std::pair<typename ProcessGroup::process_id_type,
-          typename BOOST_DISTRIB_CSR_GRAPH_TYPE::edges_size_type>
+          typename BOOST_DISTRIB_CSR_GRAPH_TYPE::base_type::edge_descriptor>
 get(edge_global_t, BOOST_DISTRIB_CSR_GRAPH_TYPE& g,
     typename BOOST_DISTRIB_CSR_GRAPH_TYPE::edge_descriptor k)
 {
@@ -1811,7 +1813,7 @@ get(edge_global_t, const BOOST_DISTRIB_CSR_GRAPH_TYPE& g)
 template<BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS>
 inline
 std::pair<typename ProcessGroup::process_id_type,
-          typename BOOST_DISTRIB_CSR_GRAPH_TYPE::edges_size_type>
+          typename BOOST_DISTRIB_CSR_GRAPH_TYPE::base_type::edge_descriptor>
 get(edge_global_t, const BOOST_DISTRIB_CSR_GRAPH_TYPE& g,
     typename BOOST_DISTRIB_CSR_GRAPH_TYPE::edge_descriptor k)
 {
@@ -1820,12 +1822,16 @@ get(edge_global_t, const BOOST_DISTRIB_CSR_GRAPH_TYPE& g,
 
   const int local_index_bits = 
     sizeof(vertex_descriptor) * CHAR_BIT - processor_bits;
+  const typename BOOST_DISTRIB_CSR_GRAPH_TYPE::edges_size_type local_index_mask =
+    typename BOOST_DISTRIB_CSR_GRAPH_TYPE::edges_size_type(-1) >> processor_bits;
   
   typedef std::pair<typename ProcessGroup::process_id_type,
-                    typename BOOST_DISTRIB_CSR_GRAPH_TYPE::edges_size_type>
+                    typename BOOST_DISTRIB_CSR_GRAPH_TYPE::base_type::edge_descriptor>
     result_type;
 
-  return result_type(k.src >> local_index_bits, k.idx);
+  return result_type(k.src >> local_index_bits,
+                     typename BOOST_DISTRIB_CSR_GRAPH_TYPE::base_type::edge_descriptor
+                       (k.src & local_index_mask, k.idx));
 }
 
 // -----------------------------------------------------------------
@@ -1840,7 +1846,8 @@ class property_map<BOOST_DISTRIB_CSR_GRAPH_TYPE, edge_index_t>
   typedef local_property_map<
             typename BOOST_DISTRIB_CSR_GRAPH_TYPE::process_group_type,
             global_map,
-            identity_property_map> type;
+            typename property_map<typename BOOST_DISTRIB_CSR_GRAPH_TYPE::base_type, edge_index_t>::type
+          > type;
   typedef type const_type;
 };
 
@@ -1852,7 +1859,7 @@ get(edge_index_t, BOOST_DISTRIB_CSR_GRAPH_TYPE& g)
   typedef typename property_map<BOOST_DISTRIB_CSR_GRAPH_TYPE, edge_index_t>
     ::type result_type;
   return result_type(g.process_group(), get(edge_global, g),
-                     identity_property_map());
+                     get(edge_index, g.base()));
 }
 
 template<BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS>
@@ -1871,7 +1878,7 @@ get(edge_index_t, const BOOST_DISTRIB_CSR_GRAPH_TYPE& g)
   typedef typename property_map<BOOST_DISTRIB_CSR_GRAPH_TYPE, edge_index_t>
     ::const_type result_type;
   return result_type(g.process_group(), get(edge_global, g),
-                     identity_property_map());
+                     get(edge_index, g.base()));
 }
 
 template<BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS>
@@ -1882,42 +1889,33 @@ get(edge_index_t, const BOOST_DISTRIB_CSR_GRAPH_TYPE& g,
   return k.idx;
 }
 
-// -----------------------------------------------------------------
-// Bundled Properties
-template<BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS, typename T, typename Bundle>
-class property_map<BOOST_DISTRIB_CSR_GRAPH_TYPE, T Bundle::*>
-{
-  typedef BOOST_DISTRIB_CSR_GRAPH_TYPE Graph;
-  typedef typename Graph::process_group_type process_group_type;
+template <BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
+class property_map<BOOST_DISTRIB_CSR_GRAPH_TYPE, Tag> {
+  typedef BOOST_DISTRIB_CSR_GRAPH_TYPE graph_type;
+  typedef typename graph_type::process_group_type process_group_type;
+  typedef typename graph_type::base_type base_graph_type;
+  typedef typename property_map<base_graph_type, Tag>::type
+    local_pmap;
+  typedef typename property_map<base_graph_type, Tag>::const_type
+    local_const_pmap;
 
-  // Determine which locator map to use (vertex or edge)
-  typedef typename mpl::if_<detail::is_vertex_bundle<VertexProperty,
-                                                     EdgeProperty,
-                                                     Bundle>,
-                            vertex_global_t, edge_global_t>::type global_t;
+  typedef graph_traits<graph_type> traits;
+  typedef typename graph_traits<base_graph_type>::vertex_descriptor local_vertex;
+  typedef typename property_traits<local_pmap>::key_type local_key_type;
 
-  // Extract the global property map for our key type.
-  typedef typename property_map<Graph, global_t>::const_type global_map;
-  typedef typename property_traits<global_map>::value_type locator;
+  typedef typename property_traits<local_pmap>::value_type value_type;
 
-  // Determine which bundle type we are using
-  typedef typename mpl::if_<detail::is_vertex_bundle<VertexProperty,
-                                                     EdgeProperty,
-                                                     Bundle>,
-                            VertexProperty, EdgeProperty>::type bundle_t;
+  typedef typename property_map<graph_type, vertex_global_t>::const_type
+    vertex_global_map;
+  typedef typename property_map<graph_type, edge_global_t>::const_type
+    edge_global_map;
+
+  typedef typename mpl::if_<is_same<typename detail::property_kind_from_graph<base_graph_type, Tag>::type,
+                                    vertex_property_tag>,
+                            vertex_global_map, edge_global_map>::type
+    global_map;
 
 public:
-  // Build the local property map
-  typedef bundle_property_map<std::vector<bundle_t>,
-                              typename locator::second_type,
-                              bundle_t,
-                              T> local_pmap;
-
-  // Build the local const property map
-  typedef bundle_property_map<const std::vector<bundle_t>,
-                              typename locator::second_type,
-                              bundle_t,
-                              const T> local_const_pmap;
   typedef ::boost::parallel::distributed_property_map<
             process_group_type, global_map, local_pmap> type;
 
@@ -1925,77 +1923,33 @@ public:
             process_group_type, global_map, local_const_pmap> const_type;
 };
 
-namespace detail {
-  // Retrieve the local bundle_property_map corresponding to a
-  // non-const vertex property.
-  template<typename Graph, typename T, typename Bundle>
-  inline bundle_property_map<std::vector<typename Graph::vertex_bundled>,
-                             typename Graph::vertex_descriptor,
-                             typename Graph::vertex_bundled, T>
-  get_distrib_csr_bundle(T Bundle::* p, Graph& g, mpl::true_)
-  {
-    typedef bundle_property_map<std::vector<typename Graph::vertex_bundled>,
-                                typename Graph::vertex_descriptor,
-                                typename Graph::vertex_bundled, T> result_type;
-    return result_type(&g.base().vertex_properties().m_vertex_properties, p);
-  }
-
-  // Retrieve the local bundle_property_map corresponding to a
-  // const vertex property.
-  template<typename Graph, typename T, typename Bundle>
-  inline bundle_property_map<const std::vector<typename Graph::vertex_bundled>,
-                             typename Graph::vertex_descriptor,
-                             typename Graph::vertex_bundled, const T>
-  get_distrib_csr_bundle(T Bundle::* p, const Graph& g, mpl::true_)
-  {
-    typedef bundle_property_map<
-              const std::vector<typename Graph::vertex_bundled>,
-              typename Graph::vertex_descriptor,
-              typename Graph::vertex_bundled, const T> result_type;
-    return result_type(&g.base().vertex_properties().m_vertex_properties, p);
-  }
-
-  // Retrieve the local bundle_property_map corresponding to a
-  // non-const edge property.
-  template<typename Graph, typename T, typename Bundle>
-  inline bundle_property_map<std::vector<typename Graph::edge_bundled>,
-                             typename Graph::edges_size_type,
-                             typename Graph::edge_bundled, T>
-  get_distrib_csr_bundle(T Bundle::* p, Graph& g, mpl::false_)
-  {
-    typedef bundle_property_map<std::vector<typename Graph::edge_bundled>,
-                                typename Graph::edges_size_type,
-                                typename Graph::edge_bundled, T> result_type;
-    return result_type(&g.base().edge_properties().m_edge_properties, p);
-  }
-
-  // Retrieve the local bundle_property_map corresponding to a
-  // const edge property.
-  template<typename Graph, typename T, typename Bundle>
-  inline bundle_property_map<const std::vector<typename Graph::edge_bundled>,
-                             typename Graph::edges_size_type,
-                             typename Graph::edge_bundled, const T>
-  get_distrib_csr_bundle(T Bundle::* p, const Graph& g, mpl::false_)
-  {
-    typedef bundle_property_map<
-              const std::vector<typename Graph::edge_bundled>,
-              typename Graph::edges_size_type,
-              typename Graph::edge_bundled, const T> result_type;
-    return result_type(&g.base().edge_properties().m_edge_properties, p);
-  }
-}
-
-template<BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS, typename T, typename Bundle>
-typename property_map<BOOST_DISTRIB_CSR_GRAPH_TYPE, T Bundle::*>::type
-get(T Bundle::* p, BOOST_DISTRIB_CSR_GRAPH_TYPE& g)
+template <BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
+typename property_map<BOOST_DISTRIB_CSR_GRAPH_TYPE, Tag>::type
+get(Tag tag, BOOST_DISTRIB_CSR_GRAPH_TYPE& g)
 {
   typedef BOOST_DISTRIB_CSR_GRAPH_TYPE Graph;
-  typedef typename property_map<Graph, T Bundle::*>::type result_type;
-  typedef typename property_map<Graph, T Bundle::*>::local_pmap local_pmap;
-
-  // Resolver
+  typedef typename property_map<Graph, Tag>::type result_type;
   typedef typename property_traits<result_type>::value_type value_type;
-  typedef typename property_reduce<T Bundle::*>::template apply<value_type>
+  typedef typename property_reduce<Tag>::template apply<value_type>
+    reduce;
+
+  typedef typename mpl::if_<is_same<typename detail::property_kind_from_graph<Graph, Tag>::type,
+                                    vertex_property_tag>,
+                            vertex_global_t, edge_global_t>::type
+    global_map_t;
+
+  return result_type(g.process_group(), get(global_map_t(), g),
+                     get(tag, g.base()), reduce());
+}
+
+template<BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
+typename property_map<BOOST_DISTRIB_CSR_GRAPH_TYPE, Tag>::const_type
+get(Tag tag, const BOOST_DISTRIB_CSR_GRAPH_TYPE& g)
+{
+  typedef BOOST_DISTRIB_CSR_GRAPH_TYPE Graph;
+  typedef typename property_map<Graph, Tag>::const_type result_type;
+  typedef typename property_traits<result_type>::value_type value_type;
+  typedef typename property_reduce<Tag>::template apply<value_type>
     reduce;
 
   typedef typename property_traits<result_type>::key_type descriptor;
@@ -2005,37 +1959,7 @@ get(T Bundle::* p, BOOST_DISTRIB_CSR_GRAPH_TYPE& g)
     global_map_t;
 
   return result_type(g.process_group(), get(global_map_t(), g),
-                     detail::get_distrib_csr_bundle
-                       (p, g, mpl::bool_<is_same<descriptor,
-                                         vertex_descriptor>::value>()),
-                     reduce());
-}
-
-template<BOOST_DISTRIB_CSR_GRAPH_TEMPLATE_PARMS, typename T, typename Bundle>
-typename property_map<BOOST_DISTRIB_CSR_GRAPH_TYPE, T Bundle::*>::const_type
-get(T Bundle::* p, const BOOST_DISTRIB_CSR_GRAPH_TYPE& g)
-{
-  typedef BOOST_DISTRIB_CSR_GRAPH_TYPE Graph;
-  typedef typename property_map<Graph, T Bundle::*>::const_type result_type;
-  typedef typename property_map<Graph, T Bundle::*>::local_const_pmap
-    local_pmap;
-
-  // Resolver
-  typedef typename property_traits<result_type>::value_type value_type;
-  typedef typename property_reduce<T Bundle::*>::template apply<value_type>
-    reduce;
-
-  typedef typename property_traits<result_type>::key_type descriptor;
-  typedef typename graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-  typedef typename mpl::if_<is_same<descriptor, vertex_descriptor>,
-                            vertex_global_t, edge_global_t>::type
-    global_map_t;
-
-  return result_type(g.process_group(), get(global_map_t(), g),
-                     detail::get_distrib_csr_bundle
-                       (p, g, mpl::bool_<is_same<descriptor,
-                                                 vertex_descriptor>::value>()),
-                     reduce());
+                     get(tag, g.base()), reduce());
 }
 
 namespace mpi {

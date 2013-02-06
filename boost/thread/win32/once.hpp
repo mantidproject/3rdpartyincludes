@@ -3,8 +3,9 @@
 
 //  once.hpp
 //
-//  (C) Copyright 2005-7 Anthony Williams 
+//  (C) Copyright 2005-7 Anthony Williams
 //  (C) Copyright 2005 John Maddock
+//  (C) Copyright 2011-2012 Vicente J. Botet Escriba
 //
 //  Distributed under the Boost Software License, Version 1.0. (See
 //  accompanying file LICENSE_1_0.txt or copy at
@@ -30,49 +31,112 @@ namespace std
 
 namespace boost
 {
+#ifdef BOOST_THREAD_PROVIDES_ONCE_CXX11
+
+  struct once_flag
+  {
+      BOOST_THREAD_NO_COPYABLE(once_flag)
+      BOOST_CONSTEXPR once_flag() BOOST_NOEXCEPT
+        : status(0), count(0)
+      {}
+  private:
+      long status;
+      long count;
+      template<typename Function>
+      friend
+      void call_once(once_flag& flag,Function f);
+  };
+
+#define BOOST_ONCE_INIT once_flag()
+#else // BOOST_THREAD_PROVIDES_ONCE_CXX11
+
     struct once_flag
     {
         long status;
         long count;
-        long throw_count;
-        void* event_handle;
-
-        ~once_flag()
-        {
-            if(count)
-            {
-                BOOST_ASSERT(count==throw_count);
-            }
-            
-            void* const old_event=BOOST_INTERLOCKED_EXCHANGE_POINTER(&event_handle,0);
-            if(old_event)
-            {
-                ::boost::detail::win32::CloseHandle(old_event);
-            }
-        }
     };
 
-#define BOOST_ONCE_INIT {0,0,0,0}
+#define BOOST_ONCE_INIT {0,0}
+#endif  // BOOST_THREAD_PROVIDES_ONCE_CXX11
 
     namespace detail
     {
-        inline void* allocate_event_handle(void*& handle)
+#ifdef BOOST_NO_ANSI_APIS
+        typedef wchar_t once_char_type;
+#else
+        typedef char once_char_type;
+#endif
+        unsigned const once_mutex_name_fixed_length=54;
+        unsigned const once_mutex_name_length=once_mutex_name_fixed_length+
+            sizeof(void*)*2+sizeof(unsigned long)*2+1;
+
+        template <class I>
+        void int_to_string(I p, once_char_type* buf)
         {
-            void* const new_handle=::boost::detail::win32::create_anonymous_event(
-                ::boost::detail::win32::manual_reset_event,
-                ::boost::detail::win32::event_initially_reset);
-            
-            void* event_handle=BOOST_INTERLOCKED_COMPARE_EXCHANGE_POINTER(&handle,
-                                                                          new_handle,0);
-            if(event_handle)
+            for(unsigned i=0; i < sizeof(I)*2; ++i,++buf)
             {
-                ::boost::detail::win32::CloseHandle(new_handle);
-                return event_handle;
+#ifdef BOOST_NO_ANSI_APIS
+                once_char_type const a=L'A';
+#else
+                once_char_type const a='A';
+#endif
+                *buf = a + static_cast<once_char_type>((p >> (i*4)) & 0x0f);
             }
-            return new_handle;
+            *buf = 0;
+        }
+
+        inline void name_once_mutex(once_char_type* mutex_name,void* flag_address)
+        {
+#ifdef BOOST_NO_ANSI_APIS
+            static const once_char_type fixed_mutex_name[]=L"Local\\{C15730E2-145C-4c5e-B005-3BC753F42475}-once-flag";
+#else
+            static const once_char_type fixed_mutex_name[]="Local\\{C15730E2-145C-4c5e-B005-3BC753F42475}-once-flag";
+#endif
+            BOOST_STATIC_ASSERT(sizeof(fixed_mutex_name) ==
+                                (sizeof(once_char_type)*(once_mutex_name_fixed_length+1)));
+
+            std::memcpy(mutex_name,fixed_mutex_name,sizeof(fixed_mutex_name));
+            detail::int_to_string(reinterpret_cast<std::ptrdiff_t>(flag_address),
+                                  mutex_name + once_mutex_name_fixed_length);
+            detail::int_to_string(win32::GetCurrentProcessId(),
+                                  mutex_name + once_mutex_name_fixed_length + sizeof(void*)*2);
+        }
+
+        inline void* open_once_event(once_char_type* mutex_name,void* flag_address)
+        {
+            if(!*mutex_name)
+            {
+                name_once_mutex(mutex_name,flag_address);
+            }
+
+#ifdef BOOST_NO_ANSI_APIS
+            return ::boost::detail::win32::OpenEventW(
+#else
+            return ::boost::detail::win32::OpenEventA(
+#endif
+                ::boost::detail::win32::synchronize |
+                ::boost::detail::win32::event_modify_state,
+                false,
+                mutex_name);
+        }
+
+        inline void* create_once_event(once_char_type* mutex_name,void* flag_address)
+        {
+            if(!*mutex_name)
+            {
+                name_once_mutex(mutex_name,flag_address);
+            }
+#ifdef BOOST_NO_ANSI_APIS
+            return ::boost::detail::win32::CreateEventW(
+#else
+            return ::boost::detail::win32::CreateEventA(
+#endif
+                0,::boost::detail::win32::manual_reset_event,
+                ::boost::detail::win32::event_initially_reset,
+                mutex_name);
         }
     }
-    
+
 
     template<typename Function>
     void call_once(once_flag& flag,Function f)
@@ -83,8 +147,9 @@ namespace boost
         long const running_value=0x7f0725e3;
         long status;
         bool counted=false;
-        void* event_handle=0;
-        long throw_count=0;
+        detail::win32::handle_manager event_handle;
+        detail::once_char_type mutex_name[detail::once_mutex_name_length];
+        mutex_name[0]=0;
 
         while((status=::boost::detail::interlocked_read_acquire(&flag.status))
               !=function_complete_flag_value)
@@ -92,11 +157,13 @@ namespace boost
             status=BOOST_INTERLOCKED_COMPARE_EXCHANGE(&flag.status,running_value,0);
             if(!status)
             {
-                try
+#ifndef BOOST_NO_EXCEPTIONS
+                try // BOOST_NO_EXCEPTIONS protected
+#endif
                 {
                     if(!event_handle)
                     {
-                        event_handle=::boost::detail::interlocked_read_acquire(&flag.event_handle);
+                        event_handle=detail::open_once_event(mutex_name,&flag);
                     }
                     if(event_handle)
                     {
@@ -109,35 +176,32 @@ namespace boost
                         counted=true;
                     }
                     BOOST_INTERLOCKED_EXCHANGE(&flag.status,function_complete_flag_value);
-                    if(!event_handle && 
+                    if(!event_handle &&
                        (::boost::detail::interlocked_read_acquire(&flag.count)>1))
                     {
-                        event_handle=::boost::detail::allocate_event_handle(flag.event_handle);
+                        event_handle=detail::create_once_event(mutex_name,&flag);
                     }
                     if(event_handle)
                     {
                         ::boost::detail::win32::SetEvent(event_handle);
                     }
-                    throw_count=::boost::detail::interlocked_read_acquire(&flag.throw_count);
                     break;
                 }
-                catch(...)
+#ifndef BOOST_NO_EXCEPTIONS
+                catch(...) // BOOST_NO_EXCEPTIONS protected
                 {
-                    if(counted)
-                    {
-                        BOOST_INTERLOCKED_INCREMENT(&flag.throw_count);
-                    }
                     BOOST_INTERLOCKED_EXCHANGE(&flag.status,0);
                     if(!event_handle)
                     {
-                        event_handle=::boost::detail::interlocked_read_acquire(&flag.event_handle);
+                        event_handle=detail::open_once_event(mutex_name,&flag);
                     }
                     if(event_handle)
                     {
                         ::boost::detail::win32::SetEvent(event_handle);
                     }
-                    throw;
+                    throw; // BOOST_NO_EXCEPTIONS protected
                 }
+#endif
             }
 
             if(!counted)
@@ -149,30 +213,14 @@ namespace boost
                 {
                     break;
                 }
-                event_handle=::boost::detail::interlocked_read_acquire(&flag.event_handle);
                 if(!event_handle)
                 {
-                    event_handle=::boost::detail::allocate_event_handle(flag.event_handle);
+                    event_handle=detail::create_once_event(mutex_name,&flag);
                     continue;
                 }
             }
             BOOST_VERIFY(!::boost::detail::win32::WaitForSingleObject(
                              event_handle,::boost::detail::win32::infinite));
-        }
-        if(counted || throw_count)
-        {
-            if(!BOOST_INTERLOCKED_EXCHANGE_ADD(&flag.count,(counted?-1:0)-throw_count))
-            {
-                if(!event_handle)
-                {
-                    event_handle=::boost::detail::interlocked_read_acquire(&flag.event_handle);
-                }
-                if(event_handle)
-                {
-                    BOOST_INTERLOCKED_EXCHANGE_POINTER(&flag.event_handle,0);
-                    ::boost::detail::win32::CloseHandle(event_handle);
-                }
-            }
         }
     }
 }

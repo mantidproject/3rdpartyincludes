@@ -1,4 +1,4 @@
-//  Copyright (c) 2001-2010 Hartmut Kaiser
+//  Copyright (c) 2001-2011 Hartmut Kaiser
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -15,6 +15,7 @@
 #include <boost/spirit/home/support/container.hpp>
 #include <boost/spirit/home/support/detail/hold_any.hpp>
 #include <boost/spirit/home/support/detail/get_encoding.hpp>
+#include <boost/spirit/home/support/detail/is_spirit_tag.hpp>
 #include <boost/spirit/home/karma/domain.hpp>
 #include <boost/spirit/home/karma/meta_compiler.hpp>
 #include <boost/spirit/home/karma/delimit_out.hpp>
@@ -37,7 +38,10 @@ namespace boost { namespace spirit
     namespace tag
     {
         template <typename Char = char>
-        struct stream_tag {};
+        struct stream_tag 
+        {
+            BOOST_SPIRIT_IS_TAG()
+        };
     }
 
     namespace karma
@@ -102,18 +106,22 @@ namespace boost { namespace spirit
 ///////////////////////////////////////////////////////////////////////////////
 namespace boost { namespace spirit { namespace karma
 {
+#ifndef BOOST_SPIRIT_NO_PREDEFINED_TERMINALS
     using spirit::stream;
     using spirit::wstream;
+#endif
+    using spirit::stream_type;
+    using spirit::wstream_type;
 
     ///////////////////////////////////////////////////////////////////////////
     template <typename Char, typename CharEncoding, typename Tag>
     struct any_stream_generator
       : primitive_generator<any_stream_generator<Char, CharEncoding, Tag> >
     {
-        template <typename Context, typename Unused>
+        template <typename Context, typename Unused = unused_type>
         struct attribute
         {
-            typedef spirit::hold_any type;
+            typedef spirit::basic_hold_any<Char> type;
         };
 
         // any_stream_generator has an attached attribute 
@@ -132,8 +140,10 @@ namespace boost { namespace spirit { namespace karma
                 return false;
 
             // use existing operator<<()
+            typedef typename attribute<Context>::type attribute_type;
+
             boost::iostreams::stream<sink_device> ostr(sink);
-            ostr << traits::extract_from(attr, context) << std::flush;
+            ostr << traits::extract_from<attribute_type>(attr, context) << std::flush;
 
             if (ostr.good()) 
                 return karma::delimit_out(sink, d);   // always do post-delimiting
@@ -163,9 +173,12 @@ namespace boost { namespace spirit { namespace karma
                 return false;
 
             // use existing operator<<()
+            typedef typename attribute<Context>::type attribute_type;
+
             boost::iostreams::stream<sink_device> ostr(sink);
             ostr.imbue(sink.get_ostream().getloc());
-            ostr << traits::extract_from(attr, context) << std::flush;
+            ostr << traits::extract_from<attribute_type>(attr, context) 
+                 << std::flush;
 
             if (ostr.good()) 
                 return karma::delimit_out(sink, d);  // always do post-delimiting
@@ -216,7 +229,7 @@ namespace boost { namespace spirit { namespace karma
             typename OutputIterator, typename Context, typename Delimiter
           , typename Attribute>
         bool generate(OutputIterator& sink, Context&, Delimiter const& d
-          , Attribute const&)
+          , Attribute const&) const
         {
             typedef karma::detail::iterator_sink<
                 OutputIterator, Char, CharEncoding, Tag
@@ -238,7 +251,7 @@ namespace boost { namespace spirit { namespace karma
         bool generate(
             karma::detail::output_iterator<
                 karma::ostream_iterator<T1, Char, Traits>, Properties
-            >& sink, Context&, Delimiter const& d, Attribute const&)
+            >& sink, Context&, Delimiter const& d, Attribute const&) const
         {
             typedef karma::detail::output_iterator<
                 karma::ostream_iterator<T1, Char, Traits>, Properties

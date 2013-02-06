@@ -17,10 +17,17 @@
 
 #include <boost/utility/result_of.hpp>
 
+#include <boost/config.hpp>
+
 #include <boost/fusion/container/vector/vector.hpp>
 
 #include <boost/fusion/functional/adapter/limits.hpp>
 #include <boost/fusion/functional/adapter/detail/access.hpp>
+
+#if defined (BOOST_MSVC)
+#  pragma warning(push)
+#  pragma warning (disable: 4512) // assignment operator could not be generated.
+#endif
 
 namespace boost { namespace fusion
 {
@@ -87,8 +94,13 @@ namespace boost { namespace fusion
     };
 }}
 
+#if defined (BOOST_MSVC)
+#  pragma warning(pop)
+#endif
+
 namespace boost 
 {
+#if !defined(BOOST_RESULT_OF_USE_DECLTYPE) || defined(BOOST_NO_DECLTYPE)
     template<class F>
     struct result_of< boost::fusion::unfused<F> const () >
     {
@@ -96,6 +108,17 @@ namespace boost
     };
     template<class F>
     struct result_of< boost::fusion::unfused<F>() >
+    {
+        typedef typename boost::fusion::unfused<F>::call_0_result type;
+    };
+#endif
+    template<class F>
+    struct tr1_result_of< boost::fusion::unfused<F> const () >
+    {
+        typedef typename boost::fusion::unfused<F>::call_const_0_result type;
+    };
+    template<class F>
+    struct tr1_result_of< boost::fusion::unfused<F>() >
     {
         typedef typename boost::fusion::unfused<F>::call_0_result type;
     };
