@@ -1,7 +1,7 @@
 //
 // Platform.h
 //
-// $Id: //poco/1.4/Foundation/include/Poco/Platform.h#3 $
+// $Id: //poco/1.4/Foundation/include/Poco/Platform.h#7 $
 //
 // Library: Foundation
 // Package: Core
@@ -123,6 +123,11 @@
 #endif
 
 
+#if !defined(POCO_OS)
+	#error "Unknown Platform."
+#endif
+
+
 //
 // Hardware Architecture and Byte Order
 //
@@ -139,6 +144,7 @@
 #define POCO_ARCH_M68K    0x0b
 #define POCO_ARCH_S390    0x0c
 #define POCO_ARCH_SH      0x0d
+#define POCO_ARCH_NIOS2   0x0e
 
 
 #if defined(__ALPHA) || defined(__alpha) || defined(__alpha__) || defined(_M_ALPHA)
@@ -187,13 +193,36 @@
 #elif defined(__s390__)
 	#define POCO_ARCH POCO_ARCH_S390
 	#define POCO_ARCH_BIG_ENDIAN 1
-#elif defined(__sh__) || defined(__sh)
+#elif defined(__sh__) || defined(__sh) || defined(SHx) || defined(_SHX_)
 	#define POCO_ARCH POCO_ARCH_SH
-	#if defined(__LITTLE_ENDIAN__)
+	#if defined(__LITTLE_ENDIAN__) || (POCO_OS == POCO_OS_WINDOWS_CE)
 		#define POCO_ARCH_LITTLE_ENDIAN 1
 	#else
 		#define POCO_ARCH_BIG_ENDIAN 1
 	#endif
+#elif defined (nios2) || defined(__nios2) || defined(__nios2__)
+    #define POCO_ARCH POCO_ARCH_NIOS2
+    #if defined(__nios2_little_endian) || defined(nios2_little_endian) || defined(__nios2_little_endian__)
+		#define POCO_ARCH_LITTLE_ENDIAN 1
+	#else
+		#define POCO_ARCH_BIG_ENDIAN 1
+	#endif
+
+#endif
+
+
+#if !defined(POCO_ARCH)
+	#error "Unknown Hardware Architecture."
+#endif
+
+
+//
+// Thread-safety of local static initialization
+//
+#if __cplusplus >= 201103L || __GNUC__ >= 4 || defined(__clang__)
+#ifndef POCO_LOCAL_STATIC_INIT_IS_THREADSAFE
+#define POCO_LOCAL_STATIC_INIT_IS_THREADSAFE 1
+#endif
 #endif
 
 

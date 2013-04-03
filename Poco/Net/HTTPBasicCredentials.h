@@ -1,7 +1,7 @@
 //
 // HTTPBasicCredentials.h
 //
-// $Id: //poco/1.4/Net/include/Poco/Net/HTTPBasicCredentials.h#1 $
+// $Id: //poco/1.4/Net/include/Poco/Net/HTTPBasicCredentials.h#4 $
 //
 // Library: Net
 // Package: HTTP
@@ -69,6 +69,11 @@ public:
 		/// Throws a NotAuthenticatedException if the request does
 		/// not contain basic authentication information.
 
+	explicit HTTPBasicCredentials(const std::string& authInfo);
+		/// Creates a HTTPBasicCredentials object with the authentication information
+		/// in the given string. The authentication information can be extracted
+		/// from a HTTPRequest object by calling HTTPRequest::getCredentials().
+
 	~HTTPBasicCredentials();
 		/// Destroys the HTTPBasicCredentials.
 
@@ -84,14 +89,23 @@ public:
 	const std::string& getPassword() const;
 		/// Returns the password.
 		
-	void authenticate(HTTPRequest& request);
+	void authenticate(HTTPRequest& request) const;
 		/// Adds authentication information to the given HTTPRequest.
+
+	void proxyAuthenticate(HTTPRequest& request) const;
+		/// Adds proxy authentication information to the given HTTPRequest.
 
 	static const std::string SCHEME;
 
+protected:
+	void parseAuthInfo(const std::string& authInfo);
+		/// Extracts username and password from Basic authentication info
+		/// by base64-decoding authInfo and splitting the resulting
+		/// string at the ':' delimiter.
+
 private:
 	HTTPBasicCredentials(const HTTPBasicCredentials&);
-	HTTPBasicCredentials& operator = (const HTTPBasicCredentials);
+	HTTPBasicCredentials& operator = (const HTTPBasicCredentials&);
 	
 	std::string _username;
 	std::string _password;

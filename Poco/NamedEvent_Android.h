@@ -1,15 +1,15 @@
 //
-// CompareFunctions.h
+// NamedEvent_Android.h
 //
-// $Id: //poco/1.4/Foundation/include/Poco/CompareFunctions.h#1 $
+// $Id: //poco/1.4/Foundation/include/Poco/NamedEvent_Android.h#1 $
 //
 // Library: Foundation
-// Package: Events
-// Module:  CompareFunctions
+// Package: Processes
+// Module:  NamedEvent
 //
-// Compare operators for the NotificationStrategies.
+// Definition of the NamedEventImpl class for Android.
 //
-// Copyright (c) 2006, Applied Informatics Software Engineering GmbH.
+// Copyright (c) 2004-2011, Applied Informatics Software Engineering GmbH.
 // and Contributors.
 //
 // Permission is hereby granted, free of charge, to any person or organization
@@ -36,28 +36,27 @@
 //
 
 
-#ifndef Foundation_CompareFunctions_INCLUDED
-#define Foundation_CompareFunctions_INCLUDED
+#ifndef Foundation_NamedEvent_Android_INCLUDED
+#define Foundation_NamedEvent_Android_INCLUDED
 
 
 #include "Poco/Foundation.h"
-#include <functional>
 
 
 namespace Poco {
 
 
-template <class T> 
-struct p_less: std::binary_function<T, T, bool>
+class Foundation_API NamedEventImpl
 {
-	bool operator () (const T* const & x, const T* const & y) const 
-	{ 
-		return *x < *y;
-	}
+protected:
+	NamedEventImpl(const std::string& name);	
+	~NamedEventImpl();
+	void setImpl();
+	void waitImpl();
 };
 
 
 } // namespace Poco
 
 
-#endif
+#endif // Foundation_NamedEvent_Android_INCLUDED

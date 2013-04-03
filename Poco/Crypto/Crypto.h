@@ -1,7 +1,7 @@
 //
 // Crypto.h
 //
-// $Id: //poco/1.4/Crypto/include/Poco/Crypto/Crypto.h#1 $
+// $Id: //poco/1.4/Crypto/include/Poco/Crypto/Crypto.h#3 $
 //
 // Library: Crypto
 // Package: CryptoCore
@@ -40,6 +40,12 @@
 
 #ifndef Crypto_Crypto_INCLUDED
 #define Crypto_Crypto_INCLUDED
+
+
+#if defined(__APPLE__)
+// OS X 10.7 deprecates some OpenSSL functions
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations" 
+#endif
 
 
 #include "Poco/Foundation.h"
@@ -107,11 +113,10 @@ void Crypto_API initializeCrypto();
 	/// libraries, by calling OpenSSLInitializer::initialize().
 	///
 	/// Should be called before using any class from the Crypto library.
-	/// The Crypto will be initialized automatically, through a static
-	/// initializer class instance, if the library is linked dynamically.
-	/// When linked statically, the static initializer will not be linked
-	/// to the application, and thus the library will not be initialized
-	/// automatically. However, it is recommended to call initializeCrypto()
+	/// The Crypto library will be initialized automatically, through  
+	/// OpenSSLInitializer instances held by various Crypto classes
+	/// (Cipher, CipherKey, RSAKey, X509Certificate).
+	/// However, it is recommended to call initializeCrypto()
 	/// in any case at application startup.
 	///
 	/// Can be called multiple times; however, for every call to

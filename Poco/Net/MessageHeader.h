@@ -1,7 +1,7 @@
 //
 // MessageHeader.h
 //
-// $Id: //poco/1.4/Net/include/Poco/Net/MessageHeader.h#2 $
+// $Id: //poco/1.4/Net/include/Poco/Net/MessageHeader.h#5 $
 //
 // Library: Net
 // Package: Messages
@@ -62,6 +62,13 @@ class Net_API MessageHeader: public NameValueCollection
 	///
 	/// MessageHeader supports writing and reading the
 	/// header data in RFC 2822 format.
+	///
+	/// The maximum number of fields can be restricted
+	/// by calling setFieldLimit(). This is useful to
+	/// defend against certain kinds of denial-of-service
+	/// attacks. The limit is only enforced when parsing
+	/// header fields from a stream, not when programmatically
+	/// adding them. The default limit is 100.
 {
 public:
 	MessageHeader();
@@ -101,6 +108,25 @@ public:
 		///
 		/// Throws a MessageException if the input stream is
 		/// malformed.
+		
+	int getFieldLimit() const;
+		/// Returns the maximum number of header fields
+		/// allowed.
+		///
+		/// See setFieldLimit() for more information.
+		
+	void setFieldLimit(int limit);
+		/// Sets the maximum number of header fields
+		/// allowed. This limit is used to defend certain
+		/// kinds of denial-of-service attacks.
+		/// Specify 0 for unlimited (not recommended).
+		///
+		/// The default limit is 100.
+
+	bool hasToken(const std::string& fieldName, const std::string& token) const;
+		/// Returns true iff the field with the given fieldName contains
+		/// the given token. Tokens in a header field are expected to be
+		/// comma-separated and are case insensitive.
 		
 	static void splitElements(const std::string& s, std::vector<std::string>& elements, bool ignoreEmpty = true);
 		/// Splits the given string into separate elements. Elements are expected
@@ -146,8 +172,11 @@ private:
 		/// Limits for basic sanity checks when reading a header
 	{
 		MAX_NAME_LENGTH  = 256,
-		MAX_VALUE_LENGTH = 4096
+		MAX_VALUE_LENGTH = 8192,
+		DFL_FIELD_LIMIT  = 100
 	};
+	
+	int _fieldLimit;
 };
 
 

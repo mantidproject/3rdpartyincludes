@@ -1,7 +1,7 @@
 //
 // CipherKeyImpl.h
 //
-// $Id: //poco/1.4/Crypto/include/Poco/Crypto/CipherKeyImpl.h#1 $
+// $Id: //poco/1.4/Crypto/include/Poco/Crypto/CipherKeyImpl.h#3 $
 //
 // Library: Crypto
 // Package: Cipher
@@ -41,6 +41,7 @@
 
 
 #include "Poco/Crypto/Crypto.h"
+#include "Poco/Crypto/OpenSSLInitializer.h"
 #include "Poco/RefCountedObject.h"
 #include "Poco/AutoPtr.h"
 #include <vector>
@@ -136,10 +137,11 @@ private:
 		/// Stores random bytes in vec.
 
 private:
-	const EVP_CIPHER* _pCipher;
-	std::string	      _name;
-	ByteVec		      _key;
-	ByteVec		      _iv;
+	const EVP_CIPHER*  _pCipher;
+	std::string	       _name;
+	ByteVec		       _key;
+	ByteVec		       _iv;
+	OpenSSLInitializer _openSSLInitializer;
 };
 
 
@@ -160,7 +162,7 @@ inline const CipherKeyImpl::ByteVec& CipherKeyImpl::getKey() const
 
 inline void CipherKeyImpl::setKey(const ByteVec& key)
 {
-	poco_assert(key.size() == keySize());
+	poco_assert(key.size() == static_cast<ByteVec::size_type>(keySize()));
 	_key = key;
 }
 
@@ -173,7 +175,7 @@ inline const CipherKeyImpl::ByteVec& CipherKeyImpl::getIV() const
 
 inline void CipherKeyImpl::setIV(const ByteVec& iv)
 {
-	poco_assert(iv.size() == ivSize());
+	poco_assert(iv.size() == static_cast<ByteVec::size_type>(ivSize()));
 	_iv = iv;
 }
 

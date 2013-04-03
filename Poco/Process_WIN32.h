@@ -1,7 +1,7 @@
 //
 // Process_WIN32.h
 //
-// $Id: //poco/1.4/Foundation/include/Poco/Process_WIN32.h#1 $
+// $Id: //poco/1.4/Foundation/include/Poco/Process_WIN32.h#4 $
 //
 // Library: Foundation
 // Package: Processes
@@ -43,6 +43,7 @@
 #include "Poco/Foundation.h"
 #include "Poco/RefCountedObject.h"
 #include <vector>
+#include <map>
 #include "Poco/UnWindows.h"
 
 
@@ -59,6 +60,7 @@ public:
 	~ProcessHandleImpl();
 	
 	UInt32 id() const;
+	HANDLE process() const;
 	int wait() const;
 	
 private:
@@ -75,10 +77,19 @@ class Foundation_API ProcessImpl
 public:
 	typedef UInt32 PIDImpl;
 	typedef std::vector<std::string> ArgsImpl;
+	typedef std::map<std::string, std::string> EnvImpl;
 	
 	static PIDImpl idImpl();
 	static void timesImpl(long& userTime, long& kernelTime);
-	static ProcessHandleImpl* launchImpl(const std::string& command, const ArgsImpl& args, Pipe* inPipe, Pipe* outPipe, Pipe* errPipe);		
+	static ProcessHandleImpl* launchImpl(
+		const std::string& command, 
+		const ArgsImpl& args, 
+		const std::string& initialDirectory,
+		Pipe* inPipe, 
+		Pipe* outPipe, 
+		Pipe* errPipe,
+		const EnvImpl& env);
+	static void killImpl(const ProcessHandleImpl& handle);
 	static void killImpl(PIDImpl pid);
 	static void requestTerminationImpl(PIDImpl pid);
 	static std::string terminationEventName(PIDImpl pid);

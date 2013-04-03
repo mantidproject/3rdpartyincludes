@@ -1,7 +1,7 @@
 //
 // Thread_POSIX.h
 //
-// $Id: //poco/1.4/Foundation/include/Poco/Thread_POSIX.h#2 $
+// $Id: //poco/1.4/Foundation/include/Poco/Thread_POSIX.h#6 $
 //
 // Library: Foundation
 // Package: Threading
@@ -53,6 +53,9 @@
 #include <sys/select.h>
 #endif
 #include <errno.h>
+#if defined(POCO_VXWORKS)
+#include <cstring>
+#endif
 
 
 namespace Poco {
@@ -72,7 +75,12 @@ public:
 		PRIO_HIGH_IMPL,
 		PRIO_HIGHEST_IMPL
 	};
-
+	
+	enum Policy
+	{
+		POLICY_DEFAULT_IMPL = SCHED_OTHER
+	};
+	
 	struct CallbackData: public RefCountedObject
 	{
 		CallbackData(): callback(0), pData(0)
@@ -89,10 +97,10 @@ public:
 	TIDImpl tidImpl() const;
 	void setPriorityImpl(int prio);
 	int getPriorityImpl() const;
-	void setOSPriorityImpl(int prio);
+	void setOSPriorityImpl(int prio, int policy = SCHED_OTHER);
 	int getOSPriorityImpl() const;
-	static int getMinOSPriorityImpl();
-	static int getMaxOSPriorityImpl();
+	static int getMinOSPriorityImpl(int policy);
+	static int getMaxOSPriorityImpl(int policy);
 	void setStackSizeImpl(int size);
 	int getStackSizeImpl() const;
 	void startImpl(Runnable& target);
@@ -109,8 +117,8 @@ public:
 protected:
 	static void* runnableEntry(void* pThread);
 	static void* callableEntry(void* pThread);
-	static int mapPrio(int prio);
-	static int reverseMapPrio(int osPrio);
+	static int mapPrio(int prio, int policy = SCHED_OTHER);
+	static int reverseMapPrio(int osPrio, int policy = SCHED_OTHER);
 
 private:
 	class CurrentThreadHolder
@@ -145,10 +153,15 @@ private:
 			pCallbackTarget(0),
 			thread(0),
 			prio(PRIO_NORMAL_IMPL),
-			osPrio(0),
+			policy(SCHED_OTHER),
 			done(false),
 			stackSize(POCO_THREAD_STACK_SIZE)
 		{
+		#if defined(POCO_VXWORKS)
+			// This workaround is for VxWorks 5.x where
+			// pthread_init() won't properly initialize the thread.
+			std::memset(&thread, 0, sizeof(thread));
+		#endif
 		}
 
 		Runnable*     pRunnableTarget;
@@ -156,6 +169,7 @@ private:
 		pthread_t     thread;
 		int           prio;
 		int           osPrio;
+		int           policy;
 		Event         done;
 		std::size_t   stackSize;
 	};
@@ -201,7 +215,7 @@ inline void ThreadImpl::yieldImpl()
 
 inline int ThreadImpl::getStackSizeImpl() const
 {
-	return _pData->stackSize;
+	return static_cast<int>(_pData->stackSize);
 }
 
 

@@ -1,7 +1,7 @@
 //
 // WinRegistryConfiguration.h
 //
-// $Id: //poco/1.4/Util/include/Poco/Util/WinRegistryConfiguration.h#1 $
+// $Id: //poco/1.4/Util/include/Poco/Util/WinRegistryConfiguration.h#3 $
 //
 // Library: Util
 // Package: Windows
@@ -57,13 +57,15 @@ class Util_API WinRegistryConfiguration: public AbstractConfiguration
 	/// in a NotImplementedException being thrown.
 {
 public:
-	WinRegistryConfiguration(const std::string& rootPath);
+	WinRegistryConfiguration(const std::string& rootPath, REGSAM extraSam = 0);
 		/// Creates the WinRegistryConfiguration. 
 		/// The rootPath must start with one of the root key names
 		/// like HKEY_CLASSES_ROOT, e.g. HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services.
 		/// All further keys are relativ to the root path and can be
 		/// dot seperated, e.g. the path MyService.ServiceName will be converted to
 		/// HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\MyService\ServiceName.
+        /// The extraSam parameter will be passed along to WinRegistryKey, to control
+        /// registry virtualization for example.
 
 protected:
 	~WinRegistryConfiguration();
@@ -74,12 +76,13 @@ protected:
 	void enumerate(const std::string& key, Keys& range) const;
 	void removeRaw(const std::string& key);
 
-	std::string ConvertToRegFormat(const std::string& key, std::string& keyName) const;
+	std::string convertToRegFormat(const std::string& key, std::string& keyName) const;
 		/// takes a key in the format of A.B.C and converts it to
 		/// registry format A\B\C, the last entry is the keyName, the rest is returned as path
 
 private:
 	std::string _rootPath;
+    REGSAM _extraSam;
 };
 
 

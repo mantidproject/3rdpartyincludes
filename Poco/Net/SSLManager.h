@@ -1,7 +1,7 @@
 //
 // SSLManager.h
 //
-// $Id: //poco/1.4/NetSSL_OpenSSL/include/Poco/Net/SSLManager.h#1 $
+// $Id: //poco/1.4/NetSSL_OpenSSL/include/Poco/Net/SSLManager.h#4 $
 //
 // Library: NetSSL_OpenSSL
 // Package: SSLCore
@@ -111,6 +111,7 @@ class NetSSL_API SSLManager
 	///            <sessionCacheSize>0..n</sessionCacheSize>       <!-- server only -->
 	///            <sessionTimeout>0..n</sessionTimeout>           <!-- server only -->
 	///            <extendedVerification>true|false</extendedVerification>
+	///            <requireTLSv1>true|false</requireTLSv1>
 	///          </server|client>
 	///          <fips>false</fips>
 	///       </openSSL>
@@ -151,6 +152,7 @@ class NetSSL_API SSLManager
 	///    - sessionTimeout (integer):  Sets the timeout (in seconds) of cached sessions on the server.
 	///    - extendedVerification (boolean): Enable or disable the automatic post-connection
 	///      extended certificate verification.
+	///    - requireTLSv1 (boolean): Require a TLSv1 connection.
 	///    - fips: Enable or disable OpenSSL FIPS mode. Only supported if the OpenSSL version 
 	///      that this library is built against supports FIPS mode.
 {
@@ -299,15 +301,15 @@ private:
 		/// verification are handled. Return 0 to terminate the handshake,
 		/// or 1 to continue despite the error.
 
-	PrivateKeyFactoryMgr           _factoryMgr;
-	CertificateHandlerFactoryMgr   _certHandlerFactoryMgr;
-	Context::Ptr                   _ptrDefaultServerContext;
-	PrivateKeyPassphraseHandlerPtr _ptrServerPassphraseHandler;
-	InvalidCertificateHandlerPtr   _ptrServerCertificateHandler;
-	Context::Ptr                   _ptrDefaultClientContext;
-	PrivateKeyPassphraseHandlerPtr _ptrClientPassphraseHandler;
-	InvalidCertificateHandlerPtr   _ptrClientCertificateHandler;
-	Poco::FastMutex                _mutex;
+	PrivateKeyFactoryMgr             _factoryMgr;
+	CertificateHandlerFactoryMgr     _certHandlerFactoryMgr;
+	Context::Ptr                     _ptrDefaultServerContext;
+	PrivateKeyPassphraseHandlerPtr   _ptrServerPassphraseHandler;
+	InvalidCertificateHandlerPtr     _ptrServerCertificateHandler;
+	Context::Ptr                     _ptrDefaultClientContext;
+	PrivateKeyPassphraseHandlerPtr   _ptrClientPassphraseHandler;
+	InvalidCertificateHandlerPtr     _ptrClientCertificateHandler;
+	Poco::FastMutex                  _mutex;
 
 	static const std::string CFG_PRIV_KEY_FILE;
 	static const std::string CFG_CERTIFICATE_FILE;
@@ -330,6 +332,7 @@ private:
 	static const std::string CFG_SESSION_CACHE_SIZE;
 	static const std::string CFG_SESSION_TIMEOUT;
 	static const std::string CFG_EXTENDED_VERIFICATION;
+	static const std::string CFG_REQUIRE_TLSV1;
 
 #ifdef OPENSSL_FIPS
 	static const std::string CFG_FIPS_MODE;
