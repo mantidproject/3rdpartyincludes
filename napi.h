@@ -21,7 +21,7 @@
  
   For further information, see <http://www.nexusformat.org>
   
-  $Id: napi.h 1797 2012-01-16 10:06:47Z Freddie Akeroyd $
+  $Id: napi.h 1901 2013-07-10 12:18:50Z Freddie Akeroyd $
 
  ----------------------------------------------------------------------------*/
 /** \file 
@@ -51,10 +51,15 @@
 #ifndef NEXUSAPI
 #define NEXUSAPI
 
+#ifdef __cplusplus
+//#include <cstdint>   // needs c++11 support
 #include <stdint.h>
+#else
+#include <stdint.h>
+#endif /* __cplusplus */
 
 /* NeXus HDF45 */
-#define NEXUS_VERSION   "4.3.0"                /* major.minor.patch */
+#define NEXUS_VERSION   "4.3.1"                /* major.minor.patch */
 
 #define CONSTCHAR       const char
 
@@ -942,7 +947,7 @@ extern  NXstatus  NXsetcache(long newVal);
   extern NXstatus  NXfflush(NXhandle pHandle);
   extern NXstatus  NXfgetpath(NXhandle fid, char *path, int *pathlen);
 #ifdef __cplusplus
-}
+};
 #endif /* __cplusplus */
 
 /**
