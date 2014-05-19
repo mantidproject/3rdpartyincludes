@@ -9,6 +9,9 @@
 #ifndef _Standard_HeaderFile
 #include <Standard.hxx>
 #endif
+#ifndef _Standard_DefineAlloc_HeaderFile
+#include <Standard_DefineAlloc.hxx>
+#endif
 #ifndef _Standard_Macro_HeaderFile
 #include <Standard_Macro.hxx>
 #endif
@@ -69,18 +72,7 @@ class TopoDS_Vertex;
 class BRep_Tool  {
 public:
 
-  void* operator new(size_t,void* anAddress) 
-  {
-    return anAddress;
-  }
-  void* operator new(size_t size) 
-  {
-    return Standard::Allocate(size); 
-  }
-  void  operator delete(void *anAddress) 
-  {
-    if (anAddress) Standard::Free((Standard_Address&)anAddress); 
-  }
+  DEFINE_STANDARD_ALLOC
 
   //! Returns <True>  if S if flaged Closed, if S is a <br>
 //!          Solid,Shell or Compound  returns <True> is S has no free boundaries. <br>
@@ -211,6 +203,9 @@ public:
   Standard_EXPORT   static  Standard_Boolean HasContinuity(const TopoDS_Edge& E,const Handle(Geom_Surface)& S1,const Handle(Geom_Surface)& S2,const TopLoc_Location& L1,const TopLoc_Location& L2) ;
   //! Returns the continuity. <br>
   Standard_EXPORT   static  GeomAbs_Shape Continuity(const TopoDS_Edge& E,const Handle(Geom_Surface)& S1,const Handle(Geom_Surface)& S2,const TopLoc_Location& L1,const TopLoc_Location& L2) ;
+  //! Returns True if the edge has regularity on some <br>
+//!          two surfaces <br>
+  Standard_EXPORT   static  Standard_Boolean HasContinuity(const TopoDS_Edge& E) ;
   //! Returns the 3d point. <br>
   Standard_EXPORT   static  gp_Pnt Pnt(const TopoDS_Vertex& V) ;
   //! Returns the tolerance. <br>

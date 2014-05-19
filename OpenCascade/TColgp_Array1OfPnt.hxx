@@ -9,6 +9,9 @@
 #ifndef _Standard_HeaderFile
 #include <Standard.hxx>
 #endif
+#ifndef _Standard_DefineAlloc_HeaderFile
+#include <Standard_DefineAlloc.hxx>
+#endif
 #ifndef _Standard_Macro_HeaderFile
 #include <Standard_Macro.hxx>
 #endif
@@ -33,27 +36,16 @@ class gp_Pnt;
 class TColgp_Array1OfPnt  {
 public:
 
-  void* operator new(size_t,void* anAddress) 
-  {
-    return anAddress;
-  }
-  void* operator new(size_t size) 
-  {
-    return Standard::Allocate(size); 
-  }
-  void  operator delete(void *anAddress) 
-  {
-    if (anAddress) Standard::Free((Standard_Address&)anAddress); 
-  }
+  DEFINE_STANDARD_ALLOC
 
   
-  Standard_EXPORT   TColgp_Array1OfPnt(const Standard_Integer Low,const Standard_Integer Up);
+      TColgp_Array1OfPnt(const Standard_Integer Low,const Standard_Integer Up);
   
-  Standard_EXPORT   TColgp_Array1OfPnt(const gp_Pnt& Item,const Standard_Integer Low,const Standard_Integer Up);
+      TColgp_Array1OfPnt(const gp_Pnt& Item,const Standard_Integer Low,const Standard_Integer Up);
   
   Standard_EXPORT     void Init(const gp_Pnt& V) ;
   
-  Standard_EXPORT     void Destroy() ;
+        void Destroy() ;
 ~TColgp_Array1OfPnt()
 {
   Destroy();

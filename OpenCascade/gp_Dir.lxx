@@ -1,4 +1,16 @@
-// File gp_Dir.lxx  , JCV 01/10/90
+// Copyright (c) 1995-1999 Matra Datavision
+// Copyright (c) 1999-2014 OPEN CASCADE SAS
+//
+// This file is part of Open CASCADE Technology software library.
+//
+// This library is free software; you can redistribute it and/or modify it under
+// the terms of the GNU Lesser General Public License version 2.1 as published
+// by the Free Software Foundation, with special exception defined in the file
+// OCCT_LGPL_EXCEPTION.txt. Consult the file LICENSE_LGPL_21.txt included in OCCT
+// distribution for complete text of the license and disclaimer of any warranty.
+//
+// Alternatively, this file may be used under the terms of Open CASCADE
+// commercial license or contractual agreement.
 
 #include <gp_Vec.hxx>
 #include <gp_Trsf.hxx>
@@ -146,7 +158,7 @@ inline Standard_Boolean gp_Dir::IsNormal
 (const gp_Dir& Other,
  const Standard_Real AngularTolerance) const
 {
-  Standard_Real Ang = Standard_PI / 2.0 - Angle (Other);
+  Standard_Real Ang = M_PI / 2.0 - Angle (Other);
   if (Ang < 0) Ang = - Ang;
   return   Ang <= AngularTolerance;
 }    
@@ -154,14 +166,14 @@ inline Standard_Boolean gp_Dir::IsNormal
 inline Standard_Boolean gp_Dir::IsOpposite
 (const gp_Dir& Other,
  const Standard_Real AngularTolerance) const
-{ return Standard_PI - Angle (Other) <= AngularTolerance; }    
+{ return M_PI - Angle (Other) <= AngularTolerance; }    
 
 inline Standard_Boolean gp_Dir::IsParallel
 (const gp_Dir& Other, 
  const Standard_Real AngularTolerance) const
 {
   Standard_Real Ang = Angle (Other);
-  return Ang <= AngularTolerance || Standard_PI - Ang <= AngularTolerance;
+  return Ang <= AngularTolerance || M_PI - Ang <= AngularTolerance;
 }    
 
 inline void gp_Dir::Cross (const gp_Dir& Right)

@@ -3,11 +3,11 @@
 // The copyright and license terms as defined for the original file apply to 
 // this header file considered to be the "object code" form of the original source.
 
-#ifndef _BOPTools_PDSFiller_HeaderFile
-#define _BOPTools_PDSFiller_HeaderFile
+#ifndef _BOPAlgo_PPaveFiller_HeaderFile
+#define _BOPAlgo_PPaveFiller_HeaderFile
 
-class BOPTools_DSFiller;
+class BOPAlgo_PaveFiller;
 
-typedef BOPTools_DSFiller* BOPTools_PDSFiller;
+typedef BOPAlgo_PaveFiller* BOPAlgo_PPaveFiller;
 
 #endif

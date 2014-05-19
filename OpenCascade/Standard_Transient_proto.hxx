@@ -1,6 +1,23 @@
+// Copyright (c) 1998-1999 Matra Datavision
+// Copyright (c) 1999-2014 OPEN CASCADE SAS
+//
+// This file is part of Open CASCADE Technology software library.
+//
+// This library is free software; you can redistribute it and/or modify it under
+// the terms of the GNU Lesser General Public License version 2.1 as published
+// by the Free Software Foundation, with special exception defined in the file
+// OCCT_LGPL_EXCEPTION.txt. Consult the file LICENSE_LGPL_21.txt included in OCCT
+// distribution for complete text of the license and disclaimer of any warranty.
+//
+// Alternatively, this file may be used under the terms of Open CASCADE
+// commercial license or contractual agreement.
+
 #ifndef _Standard_Transient_proto_HeaderFile
 #define _Standard_Transient_proto_HeaderFile
 
+#ifndef _Standard_DefineAlloc_HeaderFile
+#include <Standard_DefineAlloc.hxx>
+#endif
 #ifndef _Standard_Macro_HeaderFile
 #include <Standard_Macro.hxx>
 #endif
@@ -21,21 +38,8 @@ class Standard_Transient
     friend class Handle(Standard_Transient);
 
  public:
-    //! Operator new for placement in pre-allocated memory
-    void* operator new(size_t,void* anAddress) 
-      {
-        return anAddress;
-      }
-    //! Operator new for memory allocation uses Open CASCADE memory manager
-    void* operator new(size_t size) 
-      { 
-        return Standard::Allocate(size); 
-      }
-    //! Operator delete symmetric to operator new
-    void  operator delete(void *anAddress) 
-      { 
-        if (anAddress) Standard::Free((Standard_Address&)anAddress); 
-      }
+    
+    DEFINE_STANDARD_ALLOC
 
     //! Empty constructor
     Standard_Transient() : count(0) {}
@@ -51,10 +55,6 @@ class Standard_Transient
 
     //! Memory deallocator for transient classes
     Standard_EXPORT virtual void Delete() const;
-
-    //! Returns a hash code value for this object. 
-    //! The value is in the range 1..Upper.
-    Standard_EXPORT virtual Standard_Integer HashCode(const Standard_Integer Upper) const;
 
     Standard_EXPORT virtual void ShallowDump(Standard_OStream& ) const;
     
@@ -86,7 +86,7 @@ class Standard_Transient
 
  private:
 
-   Standard_Integer count;
+   volatile Standard_Integer count;
 };
 
 Standard_EXPORT const Handle(Standard_Type)& STANDARD_TYPE(Standard_Transient);

@@ -1,7 +1,24 @@
+// Copyright (c) 1998-1999 Matra Datavision
+// Copyright (c) 1999-2014 OPEN CASCADE SAS
+//
+// This file is part of Open CASCADE Technology software library.
+//
+// This library is free software; you can redistribute it and/or modify it under
+// the terms of the GNU Lesser General Public License version 2.1 as published
+// by the Free Software Foundation, with special exception defined in the file
+// OCCT_LGPL_EXCEPTION.txt. Consult the file LICENSE_LGPL_21.txt included in OCCT
+// distribution for complete text of the license and disclaimer of any warranty.
+//
+// Alternatively, this file may be used under the terms of Open CASCADE
+// commercial license or contractual agreement.
+
 #ifndef _Handle_Standard_Transient_HeaderFile
 #define _Handle_Standard_Transient_HeaderFile
 #ifndef _Standard_HeaderFile
 #include <Standard.hxx>
+#endif
+#ifndef _Standard_DefineAlloc_HeaderFile
+#include <Standard_DefineAlloc.hxx>
 #endif
 #ifndef _Standard_Macro_HeaderFile
 #include <Standard_Macro.hxx>
@@ -207,26 +224,23 @@ private:
   Standard_EXPORT void EndScope();
 
 public:
-  // Redefined operators new and delete ensure that handles are 
-  // allocated using OCC memory manager
 
-  void* operator new(size_t,void* anAddress) 
-  {
-    return anAddress;
-  }
-  void* operator new(size_t size) 
-  { 
-    return Standard::Allocate(size); 
-  }
-  void  operator delete(void *anAddress, size_t ) 
-  { 
-    if (anAddress) Standard::Free(anAddress); 
-  }
+  DEFINE_STANDARD_ALLOC
 
 private:
   // Field
   Standard_Transient *entity;
 };
+
+//! Function in global scope to check handles for equality.
+//! Will be used with standard OCCT collections like NCollection_DataMap within NCollection_DefaultHasher
+//! when there are no specialization defined for concrete type.
+//! Notice that this implementation compares only pointers to objects!
+inline Standard_Boolean IsEqual (const Handle(Standard_Transient)& theFirst,
+                                 const Handle(Standard_Transient)& theSecond)
+{
+  return theFirst == theSecond;
+}
 
 #ifdef _WIN32
 #pragma warning (pop)

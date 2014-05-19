@@ -1,3 +1,17 @@
+// Copyright (c) 1998-1999 Matra Datavision
+// Copyright (c) 1999-2014 OPEN CASCADE SAS
+//
+// This file is part of Open CASCADE Technology software library.
+//
+// This library is free software; you can redistribute it and/or modify it under
+// the terms of the GNU Lesser General Public License version 2.1 as published
+// by the Free Software Foundation, with special exception defined in the file
+// OCCT_LGPL_EXCEPTION.txt. Consult the file LICENSE_LGPL_21.txt included in OCCT
+// distribution for complete text of the license and disclaimer of any warranty.
+//
+// Alternatively, this file may be used under the terms of Open CASCADE
+// commercial license or contractual agreement.
+
 #ifndef _Standard_Real_HeaderFile
 #define _Standard_Real_HeaderFile
 
@@ -17,26 +31,8 @@
 
 class Handle_Standard_Type;
 
-__Standard_API Handle_Standard_Type& Standard_Real_Type_();
+__Standard_API const Handle_Standard_Type& Standard_Real_Type_();
 
-//==== In this version "PI" is a global variables.
-#ifdef PI
-#undef PI
-#endif 
-
-#if defined(WNT) && !defined(__CYGWIN32__) && !defined(__MINGW32__)
-extern "C" __Standard_API Standard_Real PI;
-extern "C" __Standard_API Standard_Real PI180;
-extern "C" __Standard_API Standard_Real Standard_PI;
-extern "C" __Standard_API Standard_Real Standard_PI180;
-#else
-
-extern const Standard_Real PI;
-extern const Standard_Real PI180;
-
-extern const Standard_Real Standard_PI;
-extern const Standard_Real Standard_PI180;
-#endif  /* WNT */
 // ===============================================
 // Methods from Standard_Entity class which are redefined:  
 //    - Hascode
@@ -202,7 +198,13 @@ inline Standard_Real     Cosh (const Standard_Real Value)
 
 
 //-------------------------------------------------------------------
-// Epsilon : Returns a real + the smallest real positive value.
+// Epsilon : The function returns absolute value of difference
+//           between 'Value' and other nearest value of
+//           Standard_Real type.
+//           Nearest value is choseen in direction of infinity
+//           the same sign as 'Value'.
+//           If 'Value' is 0 then returns minimal positive value
+//           of Standard_Real type.
 //-------------------------------------------------------------------
 inline Standard_Real     Epsilon (const Standard_Real Value) 
 {

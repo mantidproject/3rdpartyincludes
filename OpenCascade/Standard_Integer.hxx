@@ -1,3 +1,17 @@
+// Copyright (c) 1998-1999 Matra Datavision
+// Copyright (c) 1999-2013 OPEN CASCADE SAS
+//
+// This file is part of Open CASCADE Technology software library.
+//
+// This library is free software; you can redistribute it and/or modify it under
+// the terms of the GNU Lesser General Public License version 2.1 as published
+// by the Free Software Foundation, with special exception defined in the file
+// OCCT_LGPL_EXCEPTION.txt. Consult the file LICENSE_LGPL_21.txt included in OCCT
+// distribution for complete text of the license and disclaimer of any warranty.
+//
+// Alternatively, this file may be used under the terms of Open CASCADE
+// commercial license or contractual agreement.
+
 #ifndef _Standard_Integer_HeaderFile
 #define _Standard_Integer_HeaderFile
 
@@ -11,7 +25,7 @@
 
 class Handle_Standard_Type;
 
-__Standard_API Handle_Standard_Type& Standard_Integer_Type_();
+__Standard_API const Handle_Standard_Type& Standard_Integer_Type_();
 // ===============================================
 // Methods from Standard_Entity class which are redefined:  
 //    - Hascode
@@ -29,7 +43,6 @@ __Standard_API long             NextPrime   (const long               me);
 __Standard_API Standard_Integer CharToInt   (const Standard_Character me); 
 __Standard_API Standard_Integer CharToInt   (const Standard_CString   me); 
 __Standard_API Standard_Integer ShallowCopy (const Standard_Integer   me);   
-//__Standard_API Standard_Integer HashCode    (const Standard_Integer, const Standard_Integer);
 
 // ===============
 // Inline methods
@@ -46,19 +59,41 @@ inline  Standard_Integer Abs (const Standard_Integer Value)
 // ------------------------------------------------------------------
 // Hascode : Computes a hascoding value for a given Integer
 // ------------------------------------------------------------------
-inline Standard_Integer HashCode(const Standard_Integer me,
-			         const Standard_Integer Upper)
+inline Standard_Integer HashCode (const Standard_Integer theMe,
+                                  const Standard_Integer theUpper)
 {
-//   return (Abs(me) % Upper) + 1;
-   return ( ( me & 0x7fffffff ) % Upper) + 1;
+  //return (Abs (theMe) % theUpper) + 1;
+  return ((theMe & 0x7fffffff ) % theUpper) + 1;
 }
 
 // ------------------------------------------------------------------
 // IsEqual : Returns Standard_True if two integers are equal
 // ------------------------------------------------------------------
-inline Standard_Boolean IsEqual(const Standard_Integer One
-			       ,const Standard_Integer Two)
-{ return One == Two; }
+inline Standard_Boolean IsEqual (const Standard_Integer theOne,
+                                 const Standard_Integer theTwo)
+{
+  return theOne == theTwo;
+}
+
+#if (defined(_LP64) || defined(__LP64__) || defined(_WIN64))
+// ------------------------------------------------------------------
+// Hascode : Computes a hascoding value for a given unsigned integer
+// ------------------------------------------------------------------
+inline Standard_Integer HashCode (const Standard_Utf32Char theMe,
+                                  const Standard_Integer   theUpper)
+{
+  return ((theMe & 0x7fffffff ) % theUpper) + 1;
+}
+
+// ------------------------------------------------------------------
+// IsEqual : Returns Standard_True if two integers are equal
+// ------------------------------------------------------------------
+inline Standard_Boolean IsEqual (const Standard_Utf32Char theOne,
+                                 const Standard_Utf32Char theTwo)
+{
+  return theOne == theTwo;
+}
+#endif
 
 // ------------------------------------------------------------------
 // IsSimilar : Returns Standard_True if two integers are equal

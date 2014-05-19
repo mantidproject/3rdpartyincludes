@@ -9,6 +9,9 @@
 #ifndef _Standard_HeaderFile
 #include <Standard.hxx>
 #endif
+#ifndef _Standard_DefineAlloc_HeaderFile
+#include <Standard_DefineAlloc.hxx>
+#endif
 #ifndef _Standard_Macro_HeaderFile
 #include <Standard_Macro.hxx>
 #endif
@@ -19,7 +22,6 @@
 class TopoDS_Shape;
 class BRepMesh_Vertex;
 class BRepMesh_Edge;
-class BRepMesh_Triangle;
 class BRepMesh_ShapeTool;
 class BRepMesh_Circ;
 class BRepMesh_DiscretRoot;
@@ -27,9 +29,9 @@ class BRepMesh_DiscretFactory;
 class BRepMesh_ComparatorOfVertexOfDelaun;
 class BRepMesh_ComparatorOfIndexedVertexOfDelaun;
 class BRepMesh_SelectorOfDataStructureOfDelaun;
-class BRepMesh_Delaun;
 class BRepMesh_DataStructureOfDelaun;
 class BRepMesh_CircleTool;
+class BRepMesh_VertexTool;
 class BRepMesh_Array1OfVertexOfDelaun;
 class BRepMesh_HArray1OfVertexOfDelaun;
 class BRepMesh_HeapSortVertexOfDelaun;
@@ -37,6 +39,7 @@ class BRepMesh_HeapSortIndexedVertexOfDelaun;
 class BRepMesh_NodeHasherOfDataStructureOfDelaun;
 class BRepMesh_LinkHasherOfDataStructureOfDelaun;
 class BRepMesh_ElemHasherOfDataStructureOfDelaun;
+class BRepMesh_DataMapOfIntegerListOfInteger;
 class BRepMesh_IDMapOfNodeOfDataStructureOfDelaun;
 class BRepMesh_IDMapOfLinkOfDataStructureOfDelaun;
 class BRepMesh_IMapOfElementOfDataStructureOfDelaun;
@@ -59,6 +62,8 @@ class BRepMesh_GeomTool;
 class BRepMesh_DataMapOfIntegerPnt;
 class BRepMesh_PairOfPolygon;
 class BRepMesh_DataMapOfShapePairOfPolygon;
+class BRepMesh_DataMapNodeOfDataMapOfIntegerListOfInteger;
+class BRepMesh_DataMapIteratorOfDataMapOfIntegerListOfInteger;
 class BRepMesh_IndexedDataMapNodeOfIDMapOfNodeOfDataStructureOfDelaun;
 class BRepMesh_IndexedDataMapNodeOfIDMapOfLinkOfDataStructureOfDelaun;
 class BRepMesh_IndexedMapNodeOfIMapOfElementOfDataStructureOfDelaun;
@@ -85,18 +90,7 @@ class BRepMesh_DataMapIteratorOfDataMapOfShapePairOfPolygon;
 class BRepMesh  {
 public:
 
-  void* operator new(size_t,void* anAddress) 
-  {
-    return anAddress;
-  }
-  void* operator new(size_t size) 
-  {
-    return Standard::Allocate(size); 
-  }
-  void  operator delete(void *anAddress) 
-  {
-    if (anAddress) Standard::Free((Standard_Address&)anAddress); 
-  }
+  DEFINE_STANDARD_ALLOC
 
   //! call to incremental mesh. <br>
   Standard_EXPORT   static  void Mesh(const TopoDS_Shape& S,const Standard_Real d) ;
@@ -118,7 +112,6 @@ private:
 
 friend class BRepMesh_Vertex;
 friend class BRepMesh_Edge;
-friend class BRepMesh_Triangle;
 friend class BRepMesh_ShapeTool;
 friend class BRepMesh_Circ;
 friend class BRepMesh_DiscretRoot;
@@ -126,9 +119,9 @@ friend class BRepMesh_DiscretFactory;
 friend class BRepMesh_ComparatorOfVertexOfDelaun;
 friend class BRepMesh_ComparatorOfIndexedVertexOfDelaun;
 friend class BRepMesh_SelectorOfDataStructureOfDelaun;
-friend class BRepMesh_Delaun;
 friend class BRepMesh_DataStructureOfDelaun;
 friend class BRepMesh_CircleTool;
+friend class BRepMesh_VertexTool;
 friend class BRepMesh_Array1OfVertexOfDelaun;
 friend class BRepMesh_HArray1OfVertexOfDelaun;
 friend class BRepMesh_HeapSortVertexOfDelaun;
@@ -136,6 +129,7 @@ friend class BRepMesh_HeapSortIndexedVertexOfDelaun;
 friend class BRepMesh_NodeHasherOfDataStructureOfDelaun;
 friend class BRepMesh_LinkHasherOfDataStructureOfDelaun;
 friend class BRepMesh_ElemHasherOfDataStructureOfDelaun;
+friend class BRepMesh_DataMapOfIntegerListOfInteger;
 friend class BRepMesh_IDMapOfNodeOfDataStructureOfDelaun;
 friend class BRepMesh_IDMapOfLinkOfDataStructureOfDelaun;
 friend class BRepMesh_IMapOfElementOfDataStructureOfDelaun;
@@ -158,6 +152,8 @@ friend class BRepMesh_GeomTool;
 friend class BRepMesh_DataMapOfIntegerPnt;
 friend class BRepMesh_PairOfPolygon;
 friend class BRepMesh_DataMapOfShapePairOfPolygon;
+friend class BRepMesh_DataMapNodeOfDataMapOfIntegerListOfInteger;
+friend class BRepMesh_DataMapIteratorOfDataMapOfIntegerListOfInteger;
 friend class BRepMesh_IndexedDataMapNodeOfIDMapOfNodeOfDataStructureOfDelaun;
 friend class BRepMesh_IndexedDataMapNodeOfIDMapOfLinkOfDataStructureOfDelaun;
 friend class BRepMesh_IndexedMapNodeOfIMapOfElementOfDataStructureOfDelaun;

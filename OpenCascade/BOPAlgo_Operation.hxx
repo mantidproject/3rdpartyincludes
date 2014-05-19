@@ -3,17 +3,17 @@
 // The copyright and license terms as defined for the original file apply to 
 // this header file considered to be the "object code" form of the original source.
 
-#ifndef _BOP_Operation_HeaderFile
-#define _BOP_Operation_HeaderFile
+#ifndef _BOPAlgo_Operation_HeaderFile
+#define _BOPAlgo_Operation_HeaderFile
 
 
-enum BOP_Operation {
-BOP_COMMON,
-BOP_FUSE,
-BOP_CUT,
-BOP_CUT21,
-BOP_SECTION,
-BOP_UNKNOWN
+enum BOPAlgo_Operation {
+BOPAlgo_COMMON,
+BOPAlgo_FUSE,
+BOPAlgo_CUT,
+BOPAlgo_CUT21,
+BOPAlgo_SECTION,
+BOPAlgo_UNKNOWN
 };
 
 #ifndef _Standard_PrimitiveTypes_HeaderFile

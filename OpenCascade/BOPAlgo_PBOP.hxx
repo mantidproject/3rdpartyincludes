@@ -3,11 +3,11 @@
 // The copyright and license terms as defined for the original file apply to 
 // this header file considered to be the "object code" form of the original source.
 
-#ifndef _BOP_PBuilder_HeaderFile
-#define _BOP_PBuilder_HeaderFile
+#ifndef _BOPAlgo_PBOP_HeaderFile
+#define _BOPAlgo_PBOP_HeaderFile
 
-class BOP_Builder;
+class BOPAlgo_BOP;
 
-typedef BOP_Builder* BOP_PBuilder;
+typedef BOPAlgo_BOP* BOPAlgo_PBOP;
 
 #endif
