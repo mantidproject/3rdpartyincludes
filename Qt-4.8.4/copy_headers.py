@@ -5,67 +5,83 @@ script. The src is assumed to be a sub-directory called "src".
 """
 import sys
 import os
+import posixpath #  Always use unix-style paths, since the Qt headers do
 import re
 import shutil
 
+HEADER_REF_RE = re.compile(r'^#include "(.*)"$')
+STRIPPED_HEADER_RE = re.compile(r'^((?:\.\./)+)(.*)$')
+
 def usage():
-    print """python copy_qt_headers.py QT_INSTALL_DIR
+    print """python copy_qt_headers.py QT_SRC_ROOT
     """
     sys.exit(1)
 
-def copy_headers(dest_include_dir, qt_install_dir, dest_src_dir):
+def copy_headers(dest_include_dir, qt_root, dest_dir):
     """
     Copy the headers that are linked from the files in dest_include_dir
     to dest_src_dir from qt_src_dir
     """
     for root, dirs, files in os.walk(dest_include_dir):
         for dir in dirs:
-            for sub_root, sub_dirs, sub_files in os.walk(os.path.join(root, dir)):
-                copy_headers(sub_root, qt_install_dir, dest_src_dir)
+            for sub_root, sub_dirs, sub_files in os.walk(posixpath.join(root, dir)):
+                copy_headers(sub_root, qt_root, dest_dir)
         for header in files:
-            copy_header_file(os.path.join(root,header), qt_install_dir)
+            copy_referenced_headers(posixpath.join(root,header), qt_root, dest_dir)
                     
-def copy_header_file(header, qt_install_dir):
+def copy_referenced_headers(header, qt_root, dest_root):
     header_ref = get_header_ref(header)
-    if header_ref is not None:
-        try:
-            os.makedirs(os.path.dirname(header_ref))
-        except WindowsError, exc:
-            if 'already exists' not in str(exc):
-                raise
-        src_file = os.path.join(qt_install_dir, header_ref)
-        if not os.path.exists(header_ref) or \
-        os.path.getmtime(src_file) > os.path.getmtime(header_ref):
-            try:
-                shutil.copy(src_file, header_ref)
-            except IOError, exc:
-                print exc
-                print "Error copying %s to %s from reference %s" % (src_file, header_ref, header)
+    if header_ref is None or not header_ref.startswith(".."):
+        return
+    # If the bare reference exists and is up to date
+    # then do nothing
+    header_dir = posixpath.dirname(header)
+    dest_file = posixpath.join(dest_root, header_dir, header_ref)
+    if os.path.exists(dest_file):
+        return # nothing to do
+    # Strip the parent directory separators
+    re_match = STRIPPED_HEADER_RE.match(header_ref)
+    dest_file_rel = re_match.group(2)
+    dest_file_abs = posixpath.join(dest_root, dest_file_rel)
+    try:
+        os.makedirs(os.path.dirname(dest_file))
+    except WindowsError, exc:
+        if 'already exists' not in str(exc):
+            raise
+    src_file = posixpath.join(qt_root, dest_file_rel)
+    try:
+        shutil.copy(src_file, dest_file_abs)
+    except IOError, exc:
+        print exc
+        print "Error copying %s to %s referenced from %s" % (src_file, dest_file_abs, header)
 
 def get_header_ref(header):
     file = open(header)
     ref = None
     for line in file:
         if line.startswith('#include'):
-            ref = line[10:-2] # -2 takes care of newline & final "
+            line = line.strip()
+            re_match = HEADER_REF_RE.match(line)
+            if re_match is not None:
+                ref = re_match.group(1)
             break
     file.close()
-    if ref is not None and ".." in ref:
-        ref = re.sub("\.\./", "", ref)
-    else:
-        ref = None
     return ref
-   
+
 if __name__ == '__main__':
     if len(sys.argv) != 2 :
         usage()
-    dest_include_dir = os.path.join(os.path.dirname(__file__), 'include')
+    # Needs the include directory to begin with
+    mod_dir = os.path.dirname(__file__).replace("\\", "/")
+    dest_include_dir = posixpath.join(mod_dir, 'include')
     if not os.path.exists(dest_include_dir):
         sys.exit("Missing include directory, cannot determine files to copy.")
-    qt_src_dir = os.path.join(sys.argv[1], 'src')
-    if not os.path.exists(os.path.join(qt_src_dir)):
-        raise ArgumentError("Source directory '%s' does not exist." % qt_src_dir)
-    dest_src_dir = os.path.join(os.path.dirname(__file__), 'src')
-    #if not os.path.exists(dest_src_dir):
-    #    os.mkdir(dest_src_dir)
-    copy_headers(dest_include_dir, sys.argv[1], dest_src_dir)
+    qt_root = sys.argv[1].replace("\\", "/")
+
+    # Make sure we get a fresh copy each time
+    dest_dir = os.path.abspath(os.path.dirname(__file__)).replace("\\", "/")
+    shutil.rmtree(posixpath.join(dest_dir, "src"))
+    shutil.rmtree(posixpath.join(dest_dir, "tools"))
+
+    # Do the copy
+    copy_headers(dest_include_dir, qt_root, dest_dir)
