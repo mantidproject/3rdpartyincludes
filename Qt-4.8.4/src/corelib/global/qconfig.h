@@ -86,12 +86,6 @@
 # define QT_NO_NIS
 #endif
 
-#if defined(QT_NO_OPENSSL) && defined(QT_OPENSSL)
-# undef QT_NO_OPENSSL
-#elif !defined(QT_NO_OPENSSL)
-# define QT_NO_OPENSSL
-#endif
-
 #if defined(QT_NO_OPENVG) && defined(QT_OPENVG)
 # undef QT_NO_OPENVG
 #elif !defined(QT_NO_OPENVG)
@@ -120,11 +114,5 @@
 # undef QT_NO_STYLE_WINDOWSMOBILE
 #elif !defined(QT_NO_STYLE_WINDOWSMOBILE)
 # define QT_NO_STYLE_WINDOWSMOBILE
-#endif
-
-#if defined(QT_NO_WEBKIT) && defined(QT_WEBKIT)
-# undef QT_NO_WEBKIT
-#elif !defined(QT_NO_WEBKIT)
-# define QT_NO_WEBKIT
 #endif
 
